@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 
 export default function App() {
   const [subjects, setSubjects] = useState([]);
@@ -61,6 +61,56 @@ export default function App() {
 
   const currentQuestion = session ? session.questions[session.activeQuestionIndex] : null;
   const currentPage = session ? Math.floor(session.activeQuestionIndex / session.perPage) + 1 : 0;
+
+  function TimerClock({ remaining, total, isActive }) {
+    const radius = 48;
+    const stroke = 15;
+    const normalizedRadius = radius - stroke * 0.5;
+    const circumference = 2 * Math.PI * normalizedRadius;
+    const progress = total ? Math.max(0, Math.min(1, remaining / total)) : 0;
+
+    const offset = circumference - progress * circumference;
+    const [pulseKey, setPulseKey] = useState(0);
+    const prev = useRef(remaining);
+
+    useEffect(() => {
+      if (prev.current !== remaining) {
+        // toggle to retrigger CSS animation
+        setPulseKey((k) => k + 1);
+        prev.current = remaining;
+      }
+    }, [remaining]);
+
+    return (
+      <div className={`timer-clock ${isActive ? "active" : "idle"}`} key={pulseKey}>
+        <svg height={radius * 2} width={radius * 2} className="timer-svg" viewBox={`0 0 ${radius * 2} ${radius * 2}`}>
+          <g transform={`rotate(-90 ${radius} ${radius})`}>
+            <circle
+              stroke="#eee"
+              fill="transparent"
+              strokeWidth={stroke}
+              r={normalizedRadius}
+              cx={radius}
+              cy={radius}
+            />
+            <circle
+              className="progress"
+              stroke="#4f46e5"
+              fill="transparent"
+              strokeWidth={stroke}
+              strokeLinecap="round"
+              r={normalizedRadius}
+              cx={radius}
+              cy={radius}
+              strokeDasharray={`${circumference} ${circumference}`}
+              strokeDashoffset={offset}
+            />
+          </g>
+        </svg>
+        <div className={`timer-number ${isActive ? "pulse" : ""}`}>{remaining}s</div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (!session || session.revealedQuestionIds.includes(currentQuestion?.id)) {
@@ -241,6 +291,15 @@ export default function App() {
 
   return (
     <main className="shell">
+      <style>{`
+        .timer-wrapper { display:inline-flex; align-items:center; }
+        .timer-clock { display:inline-flex; align-items:center; gap:8px; }
+        .timer-svg { width:36px; height:36px; display:block; }
+        .timer-clock .progress { transition: stroke-dashoffset 0.5s linear; }
+        .timer-number { font-weight:700; font-size:0.95rem; min-width:40px; text-align:center; display:inline-block; }
+        .pulse { animation: pulse 0.6s ease-out; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.18); } 100% { transform: scale(1); } }
+      `}</style>
       <section className="hero">
         <div>
           <p className="eyebrow">React Quiz Interface</p>
@@ -392,10 +451,23 @@ export default function App() {
                       key={question.id}
                       className={`question-card ${isActive ? "active" : ""} ${isRevealed ? "revealed" : ""}`}
                     >
-                      <div className="question-header">
-                        <span>Q{absoluteIndex + 1}</span>
-                        <span>{isActive ? "Timer running" : isRevealed ? "Answer shown" : "Waiting"}</span>
-                      </div>
+                            <div className="question-header">
+                              <span>Q{absoluteIndex + 1}</span>
+                              <span>
+                                {isActive ? (
+                                  <div className="timer-wrapper">
+                                    <TimerClock remaining={remainingSeconds} total={session.timerSeconds} isActive={isActive} />
+                                  </div>
+                                ) : isRevealed ? (
+                                  "Answer shown"
+                                ) : (
+                                  "Waiting"
+                                )}
+                              </span>
+                            </div>
+                      {/* <div>
+                        <strong>{session.completed ? "Done" : `${remainingSeconds}s`}</strong>
+                      </div> */}
 
                       <div className="question-body" dangerouslySetInnerHTML={{ __html: question.questionHtml }} />
 
