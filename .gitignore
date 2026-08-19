@@ -4,3 +4,5 @@ __pycache__/
 questions.db
 env
 .env
+node_modules/
+/web/node_modules/
