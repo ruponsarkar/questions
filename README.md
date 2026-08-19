@@ -90,3 +90,29 @@ Options:
 - `--continue-on-error` continue with next syllabus if one fails
 - `--fetch-script` path to the `fetch_questions.py` if not in the same folder
 
+Quiz website
+
+This repo now also includes a lightweight quiz website with:
+
+- subject selection
+- syllabus selection
+- question count input
+- questions per page input
+- timer per question input
+- 4 randomized options per question
+- active question highlight while its timer runs
+- correct answer highlight in green when time is up
+
+Run it with:
+
+```bash
+python3 quiz_server.py
+```
+
+Then open:
+
+```text
+http://localhost:8000
+```
+
+The server uses the same `.env` database settings as the fetch scripts, so it can read from MySQL or a local SQLite file.
