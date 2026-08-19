@@ -1,0 +1,228 @@
+
+--- bulk run started 2026-08-19T13:14:44.273645 ---
+2026-08-19T13:14:45.923644 syl=94 rc=0 duration=1.649833s attempt=1
+2026-08-19T13:14:47.422622 syl=95 rc=0 duration=1.498752s attempt=1
+2026-08-19T13:14:48.932147 syl=96 rc=0 duration=1.509344s attempt=1
+2026-08-19T13:14:50.474575 syl=97 rc=0 duration=1.542211s attempt=1
+--- bulk run finished 2026-08-19T13:14:50.474747 failures=0 ---
+
+--- bulk run started 2026-08-19T13:16:14.626047 ---
+2026-08-19T13:20:55.237379 syl=167 rc=0 duration=280.610768s attempt=1
+2026-08-19T13:21:01.074596 syl=168 rc=0 duration=5.835463s attempt=1
+2026-08-19T13:21:02.676373 syl=169 rc=0 duration=1.601439s attempt=1
+2026-08-19T13:21:04.257907 syl=170 rc=0 duration=1.581371s attempt=1
+2026-08-19T13:21:06.103803 syl=171 rc=0 duration=1.845681s attempt=1
+2026-08-19T13:21:07.651822 syl=172 rc=0 duration=1.547391s attempt=1
+2026-08-19T13:21:09.286252 syl=173 rc=0 duration=1.634193s attempt=1
+2026-08-19T13:41:50.092584 syl=174 rc=1 duration=1240.805911s attempt=1
+--- bulk run aborted 2026-08-19T13:41:50.093069 ---
+
+--- bulk run started 2026-08-19T13:58:47.219668 ---
+2026-08-19T14:04:14.330528 syl=174 rc=0 duration=327.110386s attempt=1
+2026-08-19T14:04:15.953899 syl=175 rc=0 duration=1.622325s attempt=1
+2026-08-19T14:04:17.446330 syl=176 rc=0 duration=1.492324s attempt=1
+2026-08-19T14:04:19.000877 syl=177 rc=0 duration=1.554151s attempt=1
+2026-08-19T14:12:04.637590 syl=178 rc=0 duration=465.636432s attempt=1
+2026-08-19T14:12:55.113769 syl=179 rc=0 duration=50.474257s attempt=1
+2026-08-19T14:12:57.637390 syl=180 rc=0 duration=2.52257s attempt=1
+2026-08-19T14:14:30.898182 syl=181 rc=0 duration=93.260444s attempt=1
+2026-08-19T14:14:32.584776 syl=182 rc=0 duration=1.685395s attempt=1
+2026-08-19T14:30:49.987636 syl=183 rc=0 duration=977.40181s attempt=1
+2026-08-19T14:40:12.996056 syl=184 rc=0 duration=563.007219s attempt=1
+2026-08-19T14:48:26.642151 syl=185 rc=0 duration=493.644809s attempt=1
+2026-08-19T14:48:28.344944 syl=186 rc=0 duration=1.700705s attempt=1
+2026-08-19T14:48:30.543674 syl=187 rc=1 duration=2.198534s attempt=1
+--- bulk run aborted 2026-08-19T14:48:30.543837 ---
+
+--- bulk run started 2026-08-19T14:49:54.791819 ---
+2026-08-19T14:49:56.471898 syl=186 rc=0 duration=1.670712s attempt=1
+2026-08-19T14:49:58.575040 syl=187 rc=1 duration=2.10293s attempt=1
+--- bulk run aborted 2026-08-19T14:49:58.575164 ---
+
+--- bulk run started 2026-08-19T14:51:48.083343 ---
+2026-08-19T14:51:53.837707 syl=188 rc=0 duration=5.753549s attempt=1
+2026-08-19T14:51:55.442633 syl=189 rc=0 duration=1.604329s attempt=1
+2026-08-19T14:51:56.969305 syl=190 rc=0 duration=1.526369s attempt=1
+2026-08-19T14:51:58.524383 syl=191 rc=0 duration=1.554826s attempt=1
+2026-08-19T14:52:00.127623 syl=192 rc=0 duration=1.602959s attempt=1
+2026-08-19T14:52:01.672926 syl=193 rc=0 duration=1.544923s attempt=1
+2026-08-19T14:52:03.206251 syl=194 rc=0 duration=1.533085s attempt=1
+2026-08-19T14:52:05.543450 syl=195 rc=1 duration=2.336997s attempt=1
+--- bulk run aborted 2026-08-19T14:52:05.543751 ---
+
+--- bulk run started 2026-08-19T14:52:23.644125 ---
+2026-08-19T14:52:25.321244 syl=196 rc=0 duration=1.676896s attempt=1
+2026-08-19T14:52:27.127933 syl=197 rc=0 duration=1.80651s attempt=1
+2026-08-19T14:54:51.442312 syl=198 rc=0 duration=144.314135s attempt=1
+2026-08-19T14:58:47.072988 syl=199 rc=0 duration=235.629249s attempt=1
+2026-08-19T14:59:59.787429 syl=200 rc=0 duration=72.71331s attempt=1
+2026-08-19T15:01:15.962647 syl=201 rc=0 duration=76.174571s attempt=1
+2026-08-19T15:02:03.261752 syl=202 rc=0 duration=47.29795s attempt=1
+2026-08-19T15:03:00.734438 syl=203 rc=0 duration=57.472197s attempt=1
+2026-08-19T15:05:08.912009 syl=204 rc=0 duration=128.176742s attempt=1
+2026-08-19T15:05:10.585844 syl=205 rc=0 duration=1.672683s attempt=1
+2026-08-19T15:08:09.095337 syl=206 rc=0 duration=178.509225s attempt=1
+2026-08-19T15:10:43.699752 syl=207 rc=0 duration=154.603338s attempt=1
+2026-08-19T15:14:09.843263 syl=208 rc=0 duration=206.141255s attempt=1
+2026-08-19T15:19:39.815252 syl=209 rc=0 duration=329.97061s attempt=1
+2026-08-19T15:21:21.236260 syl=210 rc=0 duration=101.418844s attempt=1
+2026-08-19T15:23:30.956854 syl=211 rc=0 duration=129.718647s attempt=1
+2026-08-19T15:25:22.933690 syl=212 rc=0 duration=111.975464s attempt=1
+2026-08-19T15:27:38.988184 syl=213 rc=0 duration=136.053271s attempt=1
+2026-08-19T15:30:22.168696 syl=214 rc=0 duration=163.179761s attempt=1
+2026-08-19T15:35:42.327992 syl=215 rc=0 duration=320.157014s attempt=1
+2026-08-19T15:40:09.636183 syl=216 rc=0 duration=267.306947s attempt=1
+2026-08-19T15:43:48.577120 syl=217 rc=0 duration=218.93994s attempt=1
+2026-08-19T15:43:50.168651 syl=218 rc=0 duration=1.589453s attempt=1
+2026-08-19T15:46:11.386058 syl=219 rc=0 duration=141.217146s attempt=1
+2026-08-19T15:56:12.602226 syl=220 rc=0 duration=601.213909s attempt=1
+2026-08-19T16:00:17.378558 syl=221 rc=0 duration=244.774419s attempt=1
+2026-08-19T16:01:53.266760 syl=222 rc=0 duration=95.88645s attempt=1
+2026-08-19T16:06:24.518607 syl=223 rc=0 duration=271.250711s attempt=1
+2026-08-19T16:11:00.345063 syl=224 rc=0 duration=275.825399s attempt=1
+2026-08-19T16:15:18.987014 syl=225 rc=0 duration=258.641293s attempt=1
+2026-08-19T16:20:21.077886 syl=226 rc=0 duration=302.089337s attempt=1
+--- bulk run finished 2026-08-19T16:20:21.079620 failures=0 ---
+
+--- bulk run started 2026-08-19T16:21:14.176461 ---
+2026-08-19T16:24:53.578740 syl=227 rc=0 duration=219.401649s attempt=1
+2026-08-19T16:31:53.292528 syl=228 rc=0 duration=419.711396s attempt=1
+2026-08-19T16:35:37.331552 syl=229 rc=0 duration=224.038074s attempt=1
+2026-08-19T16:37:42.104582 syl=230 rc=0 duration=124.770549s attempt=1
+2026-08-19T16:42:30.311313 syl=231 rc=0 duration=288.205451s attempt=1
+2026-08-19T16:46:05.254273 syl=232 rc=0 duration=214.941114s attempt=1
+2026-08-19T16:46:44.559697 syl=233 rc=1 duration=39.304124s attempt=1
+--- bulk run aborted 2026-08-19T16:46:44.561682 ---
+
+--- bulk run started 2026-08-19T16:47:49.710403 ---
+2026-08-19T16:47:51.323282 syl=233 rc=1 duration=1.612291s attempt=1
+--- bulk run aborted 2026-08-19T16:47:51.323473 ---
+
+--- bulk run started 2026-08-19T16:48:23.818903 ---
+2026-08-19T16:50:15.909564 syl=233 rc=0 duration=112.090021s attempt=1
+2026-08-19T16:51:37.225926 syl=234 rc=0 duration=81.315374s attempt=1
+2026-08-19T16:51:38.970607 syl=235 rc=0 duration=1.74271s attempt=1
+2026-08-19T16:52:57.929110 syl=236 rc=0 duration=78.958227s attempt=1
+2026-08-19T16:55:54.113896 syl=237 rc=0 duration=176.183287s attempt=1
+2026-08-19T17:00:34.434102 syl=238 rc=0 duration=280.318793s attempt=1
+2026-08-19T17:00:36.085779 syl=239 rc=0 duration=1.649822s attempt=1
+2026-08-19T17:00:37.721952 syl=240 rc=0 duration=1.635989s attempt=1
+2026-08-19T17:00:39.252283 syl=241 rc=0 duration=1.53012s attempt=1
+2026-08-19T17:00:40.836855 syl=242 rc=0 duration=1.583438s attempt=1
+2026-08-19T17:00:42.828113 syl=243 rc=1 duration=1.990676s attempt=1
+--- bulk run aborted 2026-08-19T17:00:42.828286 ---
+
+--- bulk run started 2026-08-19T17:02:28.814003 ---
+2026-08-19T17:02:30.966791 syl=243 rc=1 duration=2.15223s attempt=1
+2026-08-19T17:04:11.341146 syl=244 rc=0 duration=100.374085s attempt=1
+2026-08-19T17:06:22.196831 syl=245 rc=0 duration=130.854549s attempt=1
+2026-08-19T17:08:01.917031 syl=246 rc=0 duration=99.718742s attempt=1
+2026-08-19T17:11:01.606554 syl=247 rc=0 duration=179.687912s attempt=1
+2026-08-19T17:15:14.244018 syl=248 rc=0 duration=252.635772s attempt=1
+2026-08-19T17:18:44.648875 syl=249 rc=0 duration=210.403762s attempt=1
+2026-08-19T17:20:08.983398 syl=250 rc=0 duration=84.333521s attempt=1
+2026-08-19T17:22:59.123267 syl=251 rc=0 duration=170.138553s attempt=1
+2026-08-19T17:24:45.462411 syl=252 rc=0 duration=106.338093s attempt=1
+2026-08-19T17:30:55.582495 syl=253 rc=0 duration=370.11817s attempt=1
+2026-08-19T17:32:30.372119 syl=254 rc=0 duration=94.788175s attempt=1
+2026-08-19T17:34:00.522391 syl=255 rc=0 duration=90.149123s attempt=1
+2026-08-19T17:35:23.768646 syl=256 rc=0 duration=83.244152s attempt=1
+2026-08-19T17:36:51.356244 syl=257 rc=0 duration=87.586215s attempt=1
+2026-08-19T17:38:21.481813 syl=258 rc=0 duration=90.124767s attempt=1
+2026-08-19T17:38:47.187160 syl=259 rc=0 duration=25.704237s attempt=1
+2026-08-19T17:39:38.286000 syl=260 rc=0 duration=51.097923s attempt=1
+2026-08-19T17:40:12.999202 syl=261 rc=0 duration=34.711235s attempt=1
+--- bulk run finished 2026-08-19T17:40:13.000131 failures=1 ---
+
+--- bulk run started 2026-08-19T17:42:09.344846 ---
+2026-08-19T17:48:05.053453 syl=262 rc=0 duration=355.708098s attempt=1
+2026-08-19T17:48:32.836286 syl=263 rc=0 duration=27.780733s attempt=1
+2026-08-19T17:48:34.502906 syl=264 rc=0 duration=1.665972s attempt=1
+2026-08-19T17:48:35.975134 syl=265 rc=0 duration=1.472095s attempt=1
+--- bulk run finished 2026-08-19T17:48:35.975261 failures=0 ---
+
+--- bulk run started 2026-08-19T17:51:21.977316 ---
+2026-08-19T17:51:23.812300 syl=1 rc=1 duration=1.834097s attempt=1
+2026-08-19T17:51:25.363515 syl=2 rc=0 duration=1.551034s attempt=1
+2026-08-19T17:51:26.945501 syl=3 rc=0 duration=1.580472s attempt=1
+2026-08-19T17:51:28.864669 syl=4 rc=0 duration=1.919012s attempt=1
+2026-08-19T17:51:30.688400 syl=5 rc=1 duration=1.823578s attempt=1
+2026-08-19T17:51:32.319246 syl=6 rc=0 duration=1.63055s attempt=1
+2026-08-19T17:51:34.159281 syl=7 rc=0 duration=1.839897s attempt=1
+2026-08-19T17:51:35.809231 syl=8 rc=0 duration=1.649758s attempt=1
+2026-08-19T17:51:37.425070 syl=9 rc=0 duration=1.615656s attempt=1
+2026-08-19T17:51:39.017287 syl=10 rc=0 duration=1.591891s attempt=1
+2026-08-19T17:51:40.562244 syl=11 rc=0 duration=1.544809s attempt=1
+2026-08-19T17:51:42.083440 syl=12 rc=0 duration=1.521001s attempt=1
+2026-08-19T17:51:43.650206 syl=13 rc=0 duration=1.566562s attempt=1
+2026-08-19T17:51:45.261180 syl=14 rc=0 duration=1.610632s attempt=1
+2026-08-19T17:51:46.859128 syl=15 rc=0 duration=1.597739s attempt=1
+2026-08-19T17:51:48.481471 syl=16 rc=0 duration=1.622198s attempt=1
+2026-08-19T17:51:50.004659 syl=17 rc=0 duration=1.52299s attempt=1
+2026-08-19T17:51:51.634875 syl=18 rc=0 duration=1.630085s attempt=1
+2026-08-19T17:51:53.284211 syl=19 rc=0 duration=1.63256s attempt=1
+2026-08-19T17:51:54.818990 syl=20 rc=0 duration=1.533962s attempt=1
+2026-08-19T17:51:56.422970 syl=21 rc=0 duration=1.603349s attempt=1
+2026-08-19T17:51:57.976138 syl=22 rc=0 duration=1.55298s attempt=1
+2026-08-19T17:51:59.655530 syl=23 rc=0 duration=1.679216s attempt=1
+2026-08-19T17:52:01.483542 syl=24 rc=0 duration=1.827841s attempt=1
+2026-08-19T17:52:02.945788 syl=25 rc=0 duration=1.461843s attempt=1
+2026-08-19T17:52:04.541663 syl=26 rc=0 duration=1.595738s attempt=1
+2026-08-19T17:52:06.128934 syl=27 rc=0 duration=1.587129s attempt=1
+2026-08-19T17:52:07.774380 syl=28 rc=0 duration=1.645176s attempt=1
+2026-08-19T17:52:09.393245 syl=29 rc=0 duration=1.618501s attempt=1
+2026-08-19T17:52:11.003171 syl=30 rc=0 duration=1.609705s attempt=1
+2026-08-19T17:52:12.527609 syl=31 rc=0 duration=1.524218s attempt=1
+2026-08-19T17:52:14.216085 syl=32 rc=0 duration=1.688255s attempt=1
+2026-08-19T17:52:15.786808 syl=33 rc=0 duration=1.570504s attempt=1
+2026-08-19T17:52:17.386074 syl=34 rc=0 duration=1.597858s attempt=1
+2026-08-19T17:52:19.100267 syl=35 rc=0 duration=1.713997s attempt=1
+2026-08-19T17:52:20.740195 syl=36 rc=0 duration=1.639785s attempt=1
+2026-08-19T17:52:22.330915 syl=37 rc=0 duration=1.590514s attempt=1
+2026-08-19T17:52:23.936356 syl=38 rc=0 duration=1.605123s attempt=1
+2026-08-19T17:52:25.486209 syl=39 rc=0 duration=1.548653s attempt=1
+2026-08-19T17:52:27.062361 syl=40 rc=0 duration=1.575089s attempt=1
+2026-08-19T17:52:28.605713 syl=41 rc=0 duration=1.543146s attempt=1
+2026-08-19T17:52:30.207382 syl=42 rc=0 duration=1.601469s attempt=1
+2026-08-19T17:52:31.771586 syl=43 rc=0 duration=1.563591s attempt=1
+2026-08-19T17:52:33.394253 syl=44 rc=0 duration=1.622451s attempt=1
+2026-08-19T17:52:34.992031 syl=45 rc=0 duration=1.59757s attempt=1
+2026-08-19T17:52:36.572905 syl=46 rc=0 duration=1.580669s attempt=1
+2026-08-19T17:52:38.088310 syl=47 rc=0 duration=1.514746s attempt=1
+2026-08-19T17:52:39.688319 syl=48 rc=0 duration=1.599781s attempt=1
+2026-08-19T17:52:41.272619 syl=49 rc=0 duration=1.584068s attempt=1
+2026-08-19T17:52:42.816503 syl=50 rc=0 duration=1.543687s attempt=1
+2026-08-19T17:52:44.471250 syl=51 rc=0 duration=1.654117s attempt=1
+2026-08-19T17:52:45.954128 syl=52 rc=0 duration=1.482634s attempt=1
+2026-08-19T17:52:47.542547 syl=53 rc=0 duration=1.58821s attempt=1
+2026-08-19T17:52:49.187353 syl=54 rc=0 duration=1.644664s attempt=1
+2026-08-19T17:52:50.868925 syl=55 rc=0 duration=1.681255s attempt=1
+2026-08-19T17:52:52.434027 syl=56 rc=0 duration=1.564912s attempt=1
+2026-08-19T17:52:54.223696 syl=57 rc=0 duration=1.789482s attempt=1
+2026-08-19T17:52:55.709129 syl=58 rc=0 duration=1.485269s attempt=1
+2026-08-19T17:52:57.263358 syl=59 rc=0 duration=1.554012s attempt=1
+2026-08-19T17:52:58.842703 syl=60 rc=0 duration=1.578747s attempt=1
+2026-08-19T17:53:00.471041 syl=61 rc=0 duration=1.628126s attempt=1
+2026-08-19T17:53:01.993964 syl=62 rc=0 duration=1.522719s attempt=1
+2026-08-19T17:53:03.547333 syl=63 rc=0 duration=1.553186s attempt=1
+2026-08-19T17:53:05.116235 syl=64 rc=0 duration=1.568681s attempt=1
+2026-08-19T17:53:06.674513 syl=65 rc=0 duration=1.558051s attempt=1
+2026-08-19T17:53:08.275079 syl=66 rc=0 duration=1.599947s attempt=1
+2026-08-19T17:53:09.944653 syl=67 rc=0 duration=1.669366s attempt=1
+2026-08-19T17:53:12.150927 syl=68 rc=1 duration=2.206069s attempt=1
+2026-08-19T17:53:13.727735 syl=69 rc=0 duration=1.576587s attempt=1
+2026-08-19T17:53:15.296247 syl=70 rc=0 duration=1.568308s attempt=1
+2026-08-19T17:53:17.083171 syl=71 rc=0 duration=1.78628s attempt=1
+2026-08-19T17:53:19.156135 syl=72 rc=1 duration=2.072777s attempt=1
+2026-08-19T17:53:20.801636 syl=73 rc=0 duration=1.645265s attempt=1
+2026-08-19T17:53:22.310865 syl=74 rc=0 duration=1.509015s attempt=1
+2026-08-19T17:53:23.839109 syl=75 rc=0 duration=1.528034s attempt=1
+2026-08-19T17:53:25.439192 syl=76 rc=0 duration=1.599883s attempt=1
+2026-08-19T17:53:27.041080 syl=77 rc=0 duration=1.601685s attempt=1
+2026-08-19T17:53:28.561773 syl=78 rc=0 duration=1.52048s attempt=1
+2026-08-19T17:53:30.191824 syl=79 rc=0 duration=1.629407s attempt=1
+2026-08-19T17:53:31.786210 syl=80 rc=0 duration=1.594164s attempt=1
+2026-08-19T17:53:33.269728 syl=81 rc=0 duration=1.483331s attempt=1
+2026-08-19T17:53:34.841533 syl=82 rc=0 duration=1.5716s attempt=1
+2026-08-19T17:53:36.455420 syl=83 rc=0 duration=1.613268s attempt=1
+--- bulk run finished 2026-08-19T17:53:36.455570 failures=4 ---
