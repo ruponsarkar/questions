@@ -236,9 +236,9 @@ export default function App() {
    *      ↓
    * Wait 2 seconds
    *      ↓
-   * Hide current question
+   * Collapse current question upward
    *      ↓
-   * Next question becomes active
+   * Next question scrolls into place
    * ============================================================
    */
   useEffect(() => {
@@ -265,27 +265,50 @@ export default function App() {
           };
         }
 
-        /*
-         * Move to next question.
-         *
-         * The previous question will disappear
-         * because visibleQuestions starts from
-         * activeQuestionIndex.
-         */
+        /* Start the upward-collapse animation before changing the list. */
         return {
           ...current,
-          activeQuestionIndex: nextIndex,
-          pendingAdvance: false,
+          advancingQuestionId:
+            current.questions[current.activeQuestionIndex].id,
         };
       });
-
-      setRemainingSeconds(0);
     }, 2000);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
   }, [session?.pendingAdvance]);
+
+  /*
+   * Keep the answered card mounted while it collapses. Once its space has
+   * closed, advancing the index leaves the next card already at the top.
+   */
+  useEffect(() => {
+    if (!session?.advancingQuestionId) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setSession((current) => {
+        if (!current || !current.advancingQuestionId) {
+          return current;
+        }
+
+        return {
+          ...current,
+          activeQuestionIndex: current.activeQuestionIndex + 1,
+          pendingAdvance: false,
+          advancingQuestionId: null,
+        };
+      });
+
+      setRemainingSeconds(0);
+    }, 480);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [session?.advancingQuestionId]);
 
   /*
    * ============================================================
@@ -366,6 +389,9 @@ export default function App() {
            * answer display period.
            */
           pendingAdvance: false,
+
+          /* Question currently collapsing out of view. */
+          advancingQuestionId: null,
 
           completed: false,
 
@@ -536,7 +562,7 @@ export default function App() {
    *
    * After current question is completed:
    *
-   *   current question disappears
+   *   current question collapses upward
    *
    *   [Next question]
    *   [Question below]
@@ -574,8 +600,7 @@ export default function App() {
      * This means questions BELOW the
      * active question remain visible.
      *
-     * Once activeQuestionIndex increases,
-     * the previous question disappears.
+   * The previous question stays mounted briefly while its exit animation runs.
      */
     return session.questions.slice(session.activeQuestionIndex);
   }, [session]);
@@ -621,19 +646,28 @@ export default function App() {
     <main className="shell">
       <style>{`
         .timer-wrapper {
-          display: inline-flex;
-          align-items: center;
+          position: absolute;
+          top: 14px;
+          right: 14px;
+          z-index: 2;
+          pointer-events: none;
         }
 
         .timer-clock {
           display: inline-flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
+          padding: 6px 10px 6px 6px;
+          border: 1px solid rgba(79, 70, 229, 0.25);
+          border-radius: 999px;
+          color: #312e81;
+          background: linear-gradient(135deg, #eef2ff, #ffffff);
+          box-shadow: 0 8px 20px rgba(79, 70, 229, 0.2);
         }
 
         .timer-svg {
-          width: 36px;
-          height: 36px;
+          width: 32px;
+          height: 32px;
           display: block;
         }
 
@@ -644,9 +678,10 @@ export default function App() {
         }
 
         .timer-number {
-          font-weight: 700;
-          font-size: 2.95rem;
-          min-width: 40px;
+          font-weight: 800;
+          font-size: 1.2rem;
+          line-height: 1;
+          min-width: 30px;
           text-align: center;
           display: inline-block;
         }
@@ -686,13 +721,34 @@ export default function App() {
         .question-list {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 0;
         }
 
         .question-card {
+          position: relative;
+          max-height: 1400px;
+          margin: 0 0 20px;
+          overflow: hidden;
           transition:
-            opacity 0.25s ease,
-            transform 0.25s ease;
+            max-height 0.48s cubic-bezier(0.4, 0, 0.2, 1),
+            margin 0.48s cubic-bezier(0.4, 0, 0.2, 1),
+            padding 0.48s cubic-bezier(0.4, 0, 0.2, 1),
+            opacity 0.34s ease,
+            transform 0.48s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .question-card.exiting {
+          max-height: 0;
+          margin: 0;
+          padding-top: 0;
+          padding-bottom: 0;
+          opacity: 0;
+          transform: translateY(-32px);
+          pointer-events: none;
+        }
+
+        .question-card:last-child {
+          margin-bottom: 0;
         }
 
         .question-card.active {
@@ -949,6 +1005,9 @@ export default function App() {
                     question.id,
                   );
 
+                  const isExiting =
+                    session.advancingQuestionId === question.id;
+
                   const selectedAnswerId = session.selectedAnswers[question.id];
 
                   return (
@@ -956,7 +1015,7 @@ export default function App() {
                       key={question.id}
                       className={`question-card ${isActive ? "active" : ""} ${
                         isRevealed ? "revealed" : ""
-                      }`}
+                      } ${isExiting ? "exiting" : ""}`}
                     >
                       {/* Question header */}
                       <div className="question-header">
