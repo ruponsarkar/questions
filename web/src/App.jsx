@@ -86,10 +86,7 @@ export default function App() {
       return null;
     }
 
-    return (
-      session.questions[session.activeQuestionIndex] ||
-      null
-    );
+    return session.questions[session.activeQuestionIndex] || null;
   }, [session]);
 
   /*
@@ -97,33 +94,19 @@ export default function App() {
    * TIMER CLOCK
    * ============================================================
    */
-  function TimerClock({
-    remaining,
-    total,
-    isActive,
-  }) {
+  function TimerClock({ remaining, total, isActive }) {
     const radius = 48;
     const stroke = 15;
 
-    const normalizedRadius =
-      radius - stroke * 0.5;
+    const normalizedRadius = radius - stroke * 0.5;
 
-    const circumference =
-      2 * Math.PI * normalizedRadius;
+    const circumference = 2 * Math.PI * normalizedRadius;
 
-    const progress = total
-      ? Math.max(
-          0,
-          Math.min(1, remaining / total)
-        )
-      : 0;
+    const progress = total ? Math.max(0, Math.min(1, remaining / total)) : 0;
 
-    const offset =
-      circumference -
-      progress * circumference;
+    const offset = circumference - progress * circumference;
 
-    const [pulseKey, setPulseKey] =
-      useState(0);
+    const [pulseKey, setPulseKey] = useState(0);
 
     const prev = useRef(remaining);
 
@@ -136,22 +119,16 @@ export default function App() {
 
     return (
       <div
-        className={`timer-clock ${
-          isActive ? "active" : "idle"
-        }`}
+        className={`timer-clock ${isActive ? "active" : "idle"}`}
         key={pulseKey}
       >
         <svg
           height={radius * 2}
           width={radius * 2}
           className="timer-svg"
-          viewBox={`0 0 ${
-            radius * 2
-          } ${radius * 2}`}
+          viewBox={`0 0 ${radius * 2} ${radius * 2}`}
         >
-          <g
-            transform={`rotate(-90 ${radius} ${radius})`}
-          >
+          <g transform={`rotate(-90 ${radius} ${radius})`}>
             <circle
               stroke="#eee"
               fill="transparent"
@@ -176,11 +153,7 @@ export default function App() {
           </g>
         </svg>
 
-        <div
-          className={`timer-number ${
-            isActive ? "pulse" : ""
-          }`}
-        >
+        <div className={`timer-number ${isActive ? "pulse" : ""}`}>
           {remaining}s
         </div>
       </div>
@@ -213,11 +186,7 @@ export default function App() {
     /*
      * Don't run timer while answer is being shown.
      */
-    if (
-      session.revealedQuestionIds.includes(
-        currentQuestion.id
-      )
-    ) {
+    if (session.revealedQuestionIds.includes(currentQuestion.id)) {
       return;
     }
 
@@ -232,33 +201,24 @@ export default function App() {
     /*
      * Start timer for the current question.
      */
-    setRemainingSeconds(
-      session.timerSeconds
-    );
+    setRemainingSeconds(session.timerSeconds);
 
-    const intervalId =
-      window.setInterval(() => {
-        setRemainingSeconds(
-          (seconds) => {
-            if (seconds <= 1) {
-              window.clearInterval(
-                intervalId
-              );
+    const intervalId = window.setInterval(() => {
+      setRemainingSeconds((seconds) => {
+        if (seconds <= 1) {
+          window.clearInterval(intervalId);
 
-              revealCurrentQuestion();
+          revealCurrentQuestion();
 
-              return 0;
-            }
+          return 0;
+        }
 
-            return seconds - 1;
-          }
-        );
-      }, 1000);
+        return seconds - 1;
+      });
+    }, 1000);
 
     return () => {
-      window.clearInterval(
-        intervalId
-      );
+      window.clearInterval(intervalId);
     };
   }, [
     currentQuestion?.id,
@@ -282,55 +242,45 @@ export default function App() {
    * ============================================================
    */
   useEffect(() => {
-    if (
-      !session ||
-      !session.pendingAdvance
-    ) {
+    if (!session || !session.pendingAdvance) {
       return;
     }
 
-    const timeoutId =
-      window.setTimeout(() => {
-        setSession((current) => {
-          if (!current) {
-            return current;
-          }
+    const timeoutId = window.setTimeout(() => {
+      setSession((current) => {
+        if (!current) {
+          return current;
+        }
 
-          const nextIndex =
-            current.activeQuestionIndex +
-            1;
+        const nextIndex = current.activeQuestionIndex + 1;
 
-          /*
-           * Last question.
-           */
-          if (
-            nextIndex >=
-            current.questions.length
-          ) {
-            return {
-              ...current,
-              pendingAdvance: false,
-              completed: true,
-            };
-          }
-
-          /*
-           * Move to next question.
-           *
-           * The previous question will disappear
-           * because visibleQuestions starts from
-           * activeQuestionIndex.
-           */
+        /*
+         * Last question.
+         */
+        if (nextIndex >= current.questions.length) {
           return {
             ...current,
-            activeQuestionIndex:
-              nextIndex,
             pendingAdvance: false,
+            completed: true,
           };
-        });
+        }
 
-        setRemainingSeconds(0);
-      }, 2000);
+        /*
+         * Move to next question.
+         *
+         * The previous question will disappear
+         * because visibleQuestions starts from
+         * activeQuestionIndex.
+         */
+        return {
+          ...current,
+          activeQuestionIndex: nextIndex,
+          pendingAdvance: false,
+        };
+      });
+
+      setRemainingSeconds(0);
+    }, 2000);
 
     return () => {
       window.clearTimeout(timeoutId);
@@ -343,10 +293,7 @@ export default function App() {
    * ============================================================
    */
   function updateField(event) {
-    const {
-      name,
-      value,
-    } = event.target;
+    const { name, value } = event.target;
 
     setForm((current) => ({
       ...current,
@@ -375,53 +322,34 @@ export default function App() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        subjectId: Number(
-          form.subjectId
-        ),
-        syllabusId: Number(
-          form.syllabusId
-        ),
-        questionCount: Number(
-          form.questionCount
-        ),
+        subjectId: Number(form.subjectId),
+        syllabusId: Number(form.syllabusId),
+        questionCount: Number(form.questionCount),
       }),
     })
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
-          throw new Error(
-            data.error
-          );
+          throw new Error(data.error);
         }
 
-        if (
-          !data.questions?.length
-        ) {
-          throw new Error(
-            "No questions found for this selection."
-          );
+        if (!data.questions?.length) {
+          throw new Error("No questions found for this selection.");
         }
 
         setQuizState({
           loading: false,
           error: "",
-          availableCount:
-            data.availableCount,
-          questions:
-            data.questions,
+          availableCount: data.availableCount,
+          questions: data.questions,
         });
 
         setSession({
-          questions:
-            data.questions,
+          questions: data.questions,
 
-          perPage: Number(
-            form.perPage
-          ),
+          perPage: Number(form.perPage),
 
-          timerSeconds: Number(
-            form.timerSeconds
-          ),
+          timerSeconds: Number(form.timerSeconds),
 
           activeQuestionIndex: 0,
 
@@ -448,9 +376,7 @@ export default function App() {
           showAllQuestions: false,
         });
 
-        setRemainingSeconds(
-          Number(form.timerSeconds)
-        );
+        setRemainingSeconds(Number(form.timerSeconds));
       })
       .catch((error) => {
         setSession(null);
@@ -459,9 +385,7 @@ export default function App() {
 
         setQuizState({
           loading: false,
-          error:
-            error.message ||
-            "Unable to start quiz.",
+          error: error.message || "Unable to start quiz.",
           availableCount: 0,
           questions: [],
         });
@@ -473,10 +397,7 @@ export default function App() {
    * CHOOSE ANSWER
    * ============================================================
    */
-  function chooseAnswer(
-    questionId,
-    answerId
-  ) {
+  function chooseAnswer(questionId, answerId) {
     if (!session) {
       return;
     }
@@ -485,26 +406,16 @@ export default function App() {
      * Don't allow answer selection
      * after answer is revealed.
      */
-    if (
-      session.revealedQuestionIds.includes(
-        questionId
-      )
-    ) {
+    if (session.revealedQuestionIds.includes(questionId)) {
       return;
     }
 
     /*
      * Only active question can be answered.
      */
-    const activeQuestion =
-      session.questions[
-        session.activeQuestionIndex
-      ];
+    const activeQuestion = session.questions[session.activeQuestionIndex];
 
-    if (
-      !activeQuestion ||
-      activeQuestion.id !== questionId
-    ) {
+    if (!activeQuestion || activeQuestion.id !== questionId) {
       return;
     }
 
@@ -552,10 +463,7 @@ export default function App() {
         return current;
       }
 
-      const question =
-        current.questions[
-          current.activeQuestionIndex
-        ];
+      const question = current.questions[current.activeQuestionIndex];
 
       if (!question) {
         return current;
@@ -564,21 +472,14 @@ export default function App() {
       /*
        * Already revealed.
        */
-      if (
-        current.revealedQuestionIds.includes(
-          question.id
-        )
-      ) {
+      if (current.revealedQuestionIds.includes(question.id)) {
         return current;
       }
 
       return {
         ...current,
 
-        revealedQuestionIds: [
-          ...current.revealedQuestionIds,
-          question.id,
-        ],
+        revealedQuestionIds: [...current.revealedQuestionIds, question.id],
 
         /*
          * Start 2 second delay.
@@ -643,46 +544,41 @@ export default function App() {
    *
    * ============================================================
    */
-  const visibleQuestions =
-    useMemo(() => {
-      if (!session) {
-        return [];
-      }
+  const visibleQuestions = useMemo(() => {
+    if (!session) {
+      return [];
+    }
 
-      /*
-       * Show everything after clicking
-       * "Show All Questions".
-       */
-      if (
-        session.showAllQuestions
-      ) {
-        return session.questions;
-      }
+    /*
+     * Show everything after clicking
+     * "Show All Questions".
+     */
+    if (session.showAllQuestions) {
+      return session.questions;
+    }
 
-      /*
-       * Quiz completed:
-       * hide question list until
-       * Show All Questions is clicked.
-       */
-      if (session.completed) {
-        return [];
-      }
+    /*
+     * Quiz completed:
+     * hide question list until
+     * Show All Questions is clicked.
+     */
+    if (session.completed) {
+      return [];
+    }
 
-      /*
-       * IMPORTANT:
-       *
-       * Start from activeQuestionIndex.
-       *
-       * This means questions BELOW the
-       * active question remain visible.
-       *
-       * Once activeQuestionIndex increases,
-       * the previous question disappears.
-       */
-      return session.questions.slice(
-        session.activeQuestionIndex
-      );
-    }, [session]);
+    /*
+     * IMPORTANT:
+     *
+     * Start from activeQuestionIndex.
+     *
+     * This means questions BELOW the
+     * active question remain visible.
+     *
+     * Once activeQuestionIndex increases,
+     * the previous question disappears.
+     */
+    return session.questions.slice(session.activeQuestionIndex);
+  }, [session]);
 
   /*
    * ============================================================
@@ -694,31 +590,17 @@ export default function App() {
       return 0;
     }
 
-    return session.questions.reduce(
-      (total, question) => {
-        const selected =
-          session.selectedAnswers[
-            question.id
-          ];
+    return session.questions.reduce((total, question) => {
+      const selected = session.selectedAnswers[question.id];
 
-        const correct =
-          question.options.find(
-            (option) =>
-              option.isRight
-          );
+      const correct = question.options.find((option) => option.isRight);
 
-        if (
-          selected &&
-          correct &&
-          selected === correct.id
-        ) {
-          return total + 1;
-        }
+      if (selected && correct && selected === correct.id) {
+        return total + 1;
+      }
 
-        return total;
-      },
-      0
-    );
+      return total;
+    }, 0);
   }, [session]);
 
   /*
@@ -726,14 +608,9 @@ export default function App() {
    * CURRENT QUESTION NUMBER
    * ============================================================
    */
-  const currentQuestionNumber =
-    session
-      ? Math.min(
-          session.activeQuestionIndex +
-            1,
-          session.questions.length
-        )
-      : 0;
+  const currentQuestionNumber = session
+    ? Math.min(session.activeQuestionIndex + 1, session.questions.length)
+    : 0;
 
   /*
    * ============================================================
@@ -768,7 +645,7 @@ export default function App() {
 
         .timer-number {
           font-weight: 700;
-          font-size: 0.95rem;
+          font-size: 2.95rem;
           min-width: 40px;
           text-align: center;
           display: inline-block;
@@ -832,21 +709,15 @@ export default function App() {
           ======================================================== */}
       <section className="hero">
         <div>
-          <p className="eyebrow">
-            React Quiz Interface
-          </p>
+          <p className="eyebrow">React Quiz Interface</p>
 
           <h1>
-            Pick a subject, tune the timer,
-            and run a focused practice
-            session.
+            Pick a subject, tune the timer, and run a focused practice session.
           </h1>
 
           <p className="hero-copy">
-            Lightweight by design: fast
-            setup, clean cards, and
-            sequential timer control for
-            each question.
+            Lightweight by design: fast setup, clean cards, and sequential timer
+            control for each question.
           </p>
         </div>
 
@@ -854,19 +725,13 @@ export default function App() {
           <div className="stat">
             <span>Subjects</span>
 
-            <strong>
-              {subjects.length}
-            </strong>
+            <strong>{subjects.length}</strong>
           </div>
 
           <div className="stat">
-            <span>
-              Loaded Quiz Questions
-            </span>
+            <span>Loaded Quiz Questions</span>
 
-            <strong>
-              {quizState.questions.length}
-            </strong>
+            <strong>{quizState.questions.length}</strong>
           </div>
         </div>
       </section>
@@ -875,14 +740,10 @@ export default function App() {
           MAIN
           ======================================================== */}
       <section className="panel layout">
-
         {/* ======================================================
             QUIZ SETUP
             ====================================================== */}
-        <form
-          className="config-card"
-          onSubmit={startQuiz}
-        >
+        <form className="config-card" onSubmit={startQuiz}>
           <h2>Quiz Setup</h2>
 
           {/* Subject */}
@@ -895,24 +756,13 @@ export default function App() {
               onChange={updateField}
               required
             >
-              <option value="">
-                Select a subject
-              </option>
+              <option value="">Select a subject</option>
 
-              {subjects.map(
-                (subject) => (
-                  <option
-                    key={subject.id}
-                    value={subject.id}
-                  >
-                    {subject.subName} (
-                    {
-                      subject.questionCount
-                    }
-                    )
-                  </option>
-                )
-              )}
+              {subjects.map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.subName} ({subject.questionCount})
+                </option>
+              ))}
             </select>
           </label>
 
@@ -925,63 +775,38 @@ export default function App() {
               value={form.syllabusId}
               onChange={updateField}
               required
-              disabled={
-                !syllabuses.length
-              }
+              disabled={!syllabuses.length}
             >
-              <option value="">
-                Select a syllabus
-              </option>
+              <option value="">Select a syllabus</option>
 
-              {syllabuses.map(
-                (syllabus) => (
-                  <option
-                    key={syllabus.id}
-                    value={syllabus.id}
-                  >
-                    {
-                      syllabus.syllabus
-                    }{" "}
-                    (
-                    {
-                      syllabus.questionCount
-                    }
-                    )
-                  </option>
-                )
-              )}
+              {syllabuses.map((syllabus) => (
+                <option key={syllabus.id} value={syllabus.id}>
+                  {syllabus.syllabus} ({syllabus.questionCount})
+                </option>
+              ))}
             </select>
           </label>
 
           {/* Fields */}
           <div className="field-grid">
-
             {/* Question count */}
             <label>
-              <span>
-                How many questions
-              </span>
+              <span>How many questions</span>
 
               <input
                 type="number"
                 name="questionCount"
                 min="1"
                 max="100"
-                value={
-                  form.questionCount
-                }
-                onChange={
-                  updateField
-                }
+                value={form.questionCount}
+                onChange={updateField}
                 required
               />
             </label>
 
             {/* Questions per page */}
             <label>
-              <span>
-                Questions per page
-              </span>
+              <span>Questions per page</span>
 
               <input
                 type="number"
@@ -989,30 +814,22 @@ export default function App() {
                 min="1"
                 max="20"
                 value={form.perPage}
-                onChange={
-                  updateField
-                }
+                onChange={updateField}
                 required
               />
             </label>
 
             {/* Timer */}
             <label>
-              <span>
-                Timer per question
-              </span>
+              <span>Timer per question</span>
 
               <input
                 type="number"
                 name="timerSeconds"
                 min="5"
                 max="300"
-                value={
-                  form.timerSeconds
-                }
-                onChange={
-                  updateField
-                }
+                value={form.timerSeconds}
+                onChange={updateField}
                 required
               />
             </label>
@@ -1022,30 +839,20 @@ export default function App() {
           <button
             className="primary-button"
             type="submit"
-            disabled={
-              quizState.loading
-            }
+            disabled={quizState.loading}
           >
-            {quizState.loading
-              ? "Loading quiz..."
-              : "Start quiz"}
+            {quizState.loading ? "Loading quiz..." : "Start quiz"}
           </button>
 
           {/* Error */}
           {quizState.error ? (
-            <p className="error-text">
-              {quizState.error}
-            </p>
+            <p className="error-text">{quizState.error}</p>
           ) : null}
 
           {/* Available questions */}
           {quizState.availableCount ? (
             <p className="muted-text">
-              Available questions in
-              this syllabus:{" "}
-              {
-                quizState.availableCount
-              }
+              Available questions in this syllabus: {quizState.availableCount}
             </p>
           ) : null}
         </form>
@@ -1061,16 +868,11 @@ export default function App() {
              * ==================================================
              */
             <div className="empty-state">
-              <h2>
-                Ready for practice
-              </h2>
+              <h2>Ready for practice</h2>
 
               <p>
-                Choose a subject and
-                syllabus, then the quiz
-                will appear here with
-                timed question cards
-                and random options.
+                Choose a subject and syllabus, then the quiz will appear here
+                with timed question cards and random options.
               </p>
             </div>
           ) : (
@@ -1079,56 +881,35 @@ export default function App() {
                   TOOLBAR
                   ================================================ */}
               <div className="quiz-toolbar">
-
                 {/* Progress */}
                 <div>
-                  <p className="toolbar-label">
-                    Progress
-                  </p>
+                  <p className="toolbar-label">Progress</p>
 
                   <strong>
-                    Question{" "}
-                    {
-                      currentQuestionNumber
-                    }{" "}
-                    of{" "}
-                    {
-                      session.questions
-                        .length
-                    }
+                    Question {currentQuestionNumber} of{" "}
+                    {session.questions.length}
                   </strong>
                 </div>
 
                 {/* Current question */}
                 <div>
-                  <p className="toolbar-label">
-                    Current
-                  </p>
+                  <p className="toolbar-label">Current</p>
 
                   <strong>
-                    {
-                      currentQuestionNumber
-                    }{" "}
-                    /{" "}
-                    {
-                      session.questions
-                        .length
-                    }
+                    {currentQuestionNumber} / {session.questions.length}
                   </strong>
                 </div>
 
                 {/* Timer */}
                 <div>
-                  <p className="toolbar-label">
-                    Timer
-                  </p>
+                  <p className="toolbar-label">Timer</p>
 
                   <strong>
                     {session.completed
                       ? "Done"
                       : session.pendingAdvance
-                      ? "Answer shown"
-                      : `${remainingSeconds}s`}
+                        ? "Answer shown"
+                        : `${remainingSeconds}s`}
                   </strong>
                 </div>
 
@@ -1146,185 +927,124 @@ export default function App() {
                   QUESTION LIST
                   ================================================ */}
               <div className="question-list">
-                {visibleQuestions.map(
-                  (
-                    question,
-                    index
-                  ) => {
-                    /*
-                     * Because visibleQuestions
-                     * starts at activeQuestionIndex,
-                     * the actual question number
-                     * is:
-                     *
-                     * active index + index
-                     */
-                    const absoluteIndex =
-                      session.showAllQuestions
-                        ? index
-                        : session.activeQuestionIndex +
-                          index;
+                {visibleQuestions.map((question, index) => {
+                  /*
+                   * Because visibleQuestions
+                   * starts at activeQuestionIndex,
+                   * the actual question number
+                   * is:
+                   *
+                   * active index + index
+                   */
+                  const absoluteIndex = session.showAllQuestions
+                    ? index
+                    : session.activeQuestionIndex + index;
 
-                    const isActive =
-                      !session.showAllQuestions &&
-                      absoluteIndex ===
-                        session.activeQuestionIndex &&
-                      !session.completed;
+                  const isActive =
+                    !session.showAllQuestions &&
+                    absoluteIndex === session.activeQuestionIndex &&
+                    !session.completed;
 
-                    const isRevealed =
-                      session.revealedQuestionIds.includes(
-                        question.id
-                      );
+                  const isRevealed = session.revealedQuestionIds.includes(
+                    question.id,
+                  );
 
-                    const selectedAnswerId =
-                      session
-                        .selectedAnswers[
-                        question.id
-                      ];
+                  const selectedAnswerId = session.selectedAnswers[question.id];
 
-                    return (
-                      <article
-                        key={
-                          question.id
-                        }
-                        className={`question-card ${
-                          isActive
-                            ? "active"
-                            : ""
-                        } ${
-                          isRevealed
-                            ? "revealed"
-                            : ""
-                        }`}
-                      >
-                        {/* Question header */}
-                        <div className="question-header">
-                          <span>
-                            Q
-                            {absoluteIndex +
-                              1}
-                          </span>
+                  return (
+                    <article
+                      key={question.id}
+                      className={`question-card ${isActive ? "active" : ""} ${
+                        isRevealed ? "revealed" : ""
+                      }`}
+                    >
+                      {/* Question header */}
+                      <div className="question-header">
+                        <span>Q{absoluteIndex + 1}</span>
 
-                          <span>
-                            {isActive &&
-                            !isRevealed ? (
-                              /*
-                               * Active question:
-                               * show timer.
-                               */
-                              <div className="timer-wrapper">
-                                <TimerClock
-                                  remaining={
-                                    remainingSeconds
-                                  }
-                                  total={
-                                    session.timerSeconds
-                                  }
-                                  isActive={
-                                    isActive &&
-                                    !session.pendingAdvance
-                                  }
-                                />
-                              </div>
-                            ) : isRevealed ? (
-                              /*
-                               * Answer has been shown.
-                               */
-                              <span className="answer-shown">
-                                Answer shown
-                              </span>
-                            ) : (
-                              /*
-                               * Questions below
-                               * current question.
-                               */
-                              "Waiting"
-                            )}
-                          </span>
-                        </div>
-
-                        {/* Question body */}
-                        <div
-                          className="question-body"
-                          dangerouslySetInnerHTML={{
-                            __html:
-                              question.questionHtml,
-                          }}
-                        />
-
-                        {/* Options */}
-                        <div className="option-list">
-                          {question.options.map(
-                            (option) => {
-                              const isSelected =
-                                selectedAnswerId ===
-                                option.id;
-
-                              const showCorrect =
-                                isRevealed &&
-                                option.isRight;
-
-                              return (
-                                <button
-                                  key={
-                                    option.id
-                                  }
-                                  type="button"
-                                  className={`option-button ${
-                                    isSelected
-                                      ? "selected"
-                                      : ""
-                                  } ${
-                                    showCorrect
-                                      ? "correct"
-                                      : ""
-                                  }`}
-                                  onClick={() =>
-                                    chooseAnswer(
-                                      question.id,
-                                      option.id
-                                    )
-                                  }
-                                  disabled={
-                                    !isActive ||
-                                    isRevealed ||
-                                    session.showAllQuestions
-                                  }
-                                >
-                                  <span
-                                    dangerouslySetInnerHTML={{
-                                      __html:
-                                        option.answerHtml,
-                                    }}
-                                  />
-                                </button>
-                              );
-                            }
+                        <span>
+                          {isActive && !isRevealed ? (
+                            /*
+                             * Active question:
+                             * show timer.
+                             */
+                            <div className="timer-wrapper">
+                              <TimerClock
+                                remaining={remainingSeconds}
+                                total={session.timerSeconds}
+                                isActive={isActive && !session.pendingAdvance}
+                              />
+                            </div>
+                          ) : isRevealed ? (
+                            /*
+                             * Answer has been shown.
+                             */
+                            <span className="answer-shown">Answer shown</span>
+                          ) : (
+                            /*
+                             * Questions below
+                             * current question.
+                             */
+                            "Waiting"
                           )}
-                        </div>
-                      </article>
-                    );
-                  }
-                )}
+                        </span>
+                      </div>
+
+                      {/* Question body */}
+                      <div
+                        className="question-body"
+                        dangerouslySetInnerHTML={{
+                          __html: question.questionHtml,
+                        }}
+                      />
+
+                      {/* Options */}
+                      <div className="option-list">
+                        {question.options.map((option) => {
+                          const isSelected = selectedAnswerId === option.id;
+
+                          const showCorrect = isRevealed && option.isRight;
+
+                          return (
+                            <button
+                              key={option.id}
+                              type="button"
+                              className={`option-button ${
+                                isSelected ? "selected" : ""
+                              } ${showCorrect ? "correct" : ""}`}
+                              onClick={() =>
+                                chooseAnswer(question.id, option.id)
+                              }
+                              disabled={
+                                !isActive ||
+                                isRevealed ||
+                                session.showAllQuestions
+                              }
+                            >
+                              <span
+                                dangerouslySetInnerHTML={{
+                                  __html: option.answerHtml,
+                                }}
+                              />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
 
               {/* ================================================
                   COMPLETED
                   ================================================ */}
-              {session.completed &&
-              !session.showAllQuestions ? (
+              {session.completed && !session.showAllQuestions ? (
                 <>
                   <div className="result-card">
-                    <h3>
-                      Session complete
-                    </h3>
+                    <h3>Session complete</h3>
 
                     <p>
-                      Score: {score} /{" "}
-                      {
-                        session.questions
-                          .length
-                      }
+                      Score: {score} / {session.questions.length}
                     </p>
                   </div>
 
@@ -1333,9 +1053,7 @@ export default function App() {
                     <button
                       className="secondary-button"
                       type="button"
-                      onClick={
-                        showAllQuestions
-                      }
+                      onClick={showAllQuestions}
                     >
                       Show All Questions
                     </button>
@@ -1346,26 +1064,15 @@ export default function App() {
               {/* ================================================
                   ALL QUESTIONS
                   ================================================ */}
-              {session.completed &&
-              session.showAllQuestions ? (
+              {session.completed && session.showAllQuestions ? (
                 <div className="result-card">
-                  <h3>
-                    Quiz Review
-                  </h3>
+                  <h3>Quiz Review</h3>
 
                   <p>
-                    Score: {score} /{" "}
-                    {
-                      session.questions
-                        .length
-                    }
+                    Score: {score} / {session.questions.length}
                   </p>
 
-                  <p>
-                    All questions and
-                    correct answers are
-                    shown above.
-                  </p>
+                  <p>All questions and correct answers are shown above.</p>
                 </div>
               ) : null}
             </>
