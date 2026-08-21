@@ -87,34 +87,36 @@ export default function App() {
     context.fillRect(0, 0, width, height);
 
     context.fillStyle = "#33601f";
-    context.font = `700 ${isPortrait ? 16 : 18}px Manrope, sans-serif`;
+    context.font = `700 ${isPortrait ? 22 : 24}px Manrope, sans-serif`;
     context.fillText("TOP QUESTIONS", padding, padding);
 
     if (!activeSession || activeSession.completed) {
       context.fillStyle = "#1f2a17";
-      context.font = `800 ${isPortrait ? 40 : 52}px Manrope, sans-serif`;
+      context.font = `800 ${isPortrait ? 52 : 64}px Manrope, sans-serif`;
       context.fillText("Session complete", padding, height / 2);
       return;
     }
 
-    const listTop = padding + (isPortrait ? 38 : 32);
-    const cardGap = isPortrait ? 18 : 14;
+    const listTop = padding + (isPortrait ? 46 : 40);
+    const cardGap = isPortrait ? 20 : 16;
     const questions = activeSession.questions.slice(
       activeSession.activeQuestionIndex,
-      activeSession.activeQuestionIndex + 3,
+      // Use the remaining portrait space to preview another upcoming question.
+      // The canvas naturally crops the final card at the bottom of the frame.
+      activeSession.activeQuestionIndex + (isPortrait ? 4 : 2),
     );
     const isAdvancing = Boolean(activeSession.advancingQuestionId);
     const animationProgress = isAdvancing
       ? Math.min(1, (performance.now() - advanceAnimationStartedAtRef.current) / 480)
       : 0;
-    const activeCardHeight = isPortrait ? 372 : 340;
-    const waitingCardHeight = isPortrait ? 280 : 256;
+    const activeCardHeight = isPortrait ? 670 : 650;
+    const waitingCardHeight = isPortrait ? 480 : 450;
 
     const drawQuestionCard = (question, index, top, cardHeight, opacity) => {
       const isActive = index === 0;
       const isCompact = !isActive;
       const revealed = activeSession.revealedQuestionIds.includes(question.id);
-      const cardPadding = isPortrait ? 26 : 30;
+      const cardPadding = isPortrait ? 32 : 36;
       const textX = padding + cardPadding;
       const innerWidth = contentWidth - cardPadding * 2;
 
@@ -132,17 +134,19 @@ export default function App() {
       context.stroke();
 
       context.fillStyle = "#60705a";
-      context.font = `700 ${isPortrait ? 15 : 14}px Manrope, sans-serif`;
-      context.fillText(`Q${activeSession.activeQuestionIndex + index + 1}`, textX, top + 32);
+      context.font = `700 ${isPortrait ? 18 : 17}px Manrope, sans-serif`;
+      context.fillText(`Q${activeSession.activeQuestionIndex + index + 1}`, textX, top + 40);
 
       if (isActive && !revealed) {
-        const badgeX = width - padding - 170;
-        const badgeY = top + 10;
+        const badgeWidth = isPortrait ? 230 : 232;
+        const badgeHeight = isPortrait ? 82 : 82;
+        const badgeX = width - padding - badgeWidth - 18;
+        const badgeY = top + 8;
         const badgeGradient = context.createLinearGradient(
           badgeX,
           badgeY,
-          badgeX + 144,
-          badgeY + 54,
+          badgeX + badgeWidth,
+          badgeY + badgeHeight,
         );
         badgeGradient.addColorStop(0, "#fef3c7");
         badgeGradient.addColorStop(0.52, "#fde68a");
@@ -153,86 +157,86 @@ export default function App() {
         context.shadowOffsetY = 6;
         context.fillStyle = badgeGradient;
         context.beginPath();
-        context.roundRect(badgeX, badgeY, 144, 54, 27);
+        context.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, badgeHeight / 2);
         context.fill();
         context.restore();
         context.strokeStyle = "rgba(234, 88, 12, 0.62)";
         context.lineWidth = 2;
         context.beginPath();
-        context.roundRect(badgeX, badgeY, 144, 54, 27);
+        context.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, badgeHeight / 2);
         context.stroke();
 
-        const ringX = badgeX + 31;
-        const ringY = badgeY + 27;
+        const ringX = badgeX + 46;
+        const ringY = badgeY + badgeHeight / 2;
         const timerProgress = activeSession.timerSeconds
           ? Math.max(0, remainingSecondsRef.current / activeSession.timerSeconds)
           : 0;
         context.strokeStyle = "rgba(154, 52, 18, 0.18)";
-        context.lineWidth = 6;
+        context.lineWidth = 9;
         context.beginPath();
-        context.arc(ringX, ringY, 16, 0, Math.PI * 2);
+        context.arc(ringX, ringY, 26, 0, Math.PI * 2);
         context.stroke();
         context.strokeStyle = "#ea580c";
         context.lineCap = "round";
         context.beginPath();
-        context.arc(ringX, ringY, 16, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * timerProgress);
+        context.arc(ringX, ringY, 26, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * timerProgress);
         context.stroke();
         context.fillStyle = "#312e81";
-        context.font = `800 ${isPortrait ? 25 : 23}px Manrope, sans-serif`;
+        context.font = `800 ${isPortrait ? 38 : 38}px Manrope, sans-serif`;
         context.textAlign = "center";
-        context.fillText(`${remainingSecondsRef.current}s`, badgeX + 100, badgeY + 35);
+        context.fillText(`${remainingSecondsRef.current}s`, badgeX + badgeWidth - 62, badgeY + 54);
         context.textAlign = "left";
       } else if (revealed) {
         context.fillStyle = "#16733d";
-        context.font = `700 ${isPortrait ? 15 : 14}px Manrope, sans-serif`;
+        context.font = `700 ${isPortrait ? 18 : 17}px Manrope, sans-serif`;
         context.textAlign = "right";
-        context.fillText("ANSWER SHOWN", width - padding - cardPadding, top + 32);
+        context.fillText("ANSWER SHOWN", width - padding - cardPadding, top + 40);
         context.textAlign = "left";
       } else {
         context.fillStyle = "#60705a";
-        context.font = `700 ${isPortrait ? 15 : 14}px Manrope, sans-serif`;
+        context.font = `700 ${isPortrait ? 18 : 17}px Manrope, sans-serif`;
         context.textAlign = "right";
-        context.fillText("WAITING", width - padding - cardPadding, top + 32);
+        context.fillText("WAITING", width - padding - cardPadding, top + 40);
         context.textAlign = "left";
       }
 
       context.fillStyle = "#1f2a17";
       context.font = `700 ${
         // isCompact ? (isPortrait ? 17 : 16) : isPortrait ? 22 : 20
-        isCompact ? (isPortrait ? 22 : 20) : isPortrait ? 32 : 30
+        isCompact ? (isPortrait ? 34 : 32) : isPortrait ? 52 : 50
       }px Manrope, sans-serif`;
       let nextY = drawWrappedText(
         context,
         plainText(question.questionHtml),
         textX,
-        top + (isActive ? 82 : 68),
+        top + (isActive ? 128 : isPortrait ? 106 : 88),
         innerWidth,
-        isCompact ? (isPortrait ? 22 : 20) : isPortrait ? 29 : 26,
+        isCompact ? (isPortrait ? 40 : 38) : isPortrait ? 60 : 58,
         isCompact ? 1 : 2,
       );
-      nextY += 14;
+      nextY += isCompact ? (isPortrait ? 22 : 16) : 26;
 
       const selectedAnswerId = activeSession.selectedAnswers[question.id];
-      const optionHeight = isCompact ? (isPortrait ? 34 : 30) : isPortrait ? 43 : 38;
-      const optionGap = isCompact ? 6 : 8;
+      const optionHeight = isCompact ? (isPortrait ? 62 : 64) : isPortrait ? 76 : 80;
+      const optionGap = isCompact ? 12 : 14;
       question.options.forEach((option) => {
         const isCorrect = revealed && option.isRight;
         const isSelected = selectedAnswerId === option.id;
         context.fillStyle = isCorrect ? "#3c7a24" : isSelected ? "#dff1c9" : "#fbfcf8";
         context.beginPath();
-        context.roundRect(textX, nextY, innerWidth, optionHeight, 12);
+        context.roundRect(textX, nextY, innerWidth, optionHeight, 18);
         context.fill();
         context.fillStyle = isCorrect ? "#ffffff" : "#1f2a17";
         context.font = `600 ${
-          isCompact ? (isPortrait ? 13 : 12) : isPortrait ? 16 : 15
+          isCompact ? (isPortrait ? 26 : 28) : isPortrait ? 33 : 35
         }px Manrope, sans-serif`;
         drawWrappedText(
           context,
           plainText(option.answerHtml),
-          textX + 12,
-          nextY + (isCompact ? optionHeight / 2 + 4 : 24),
-          innerWidth - 24,
-          18,
+          textX + 22,
+          nextY + optionHeight / 2 + (isCompact ? 9 : 11),
+          innerWidth - 44,
+          isCompact ? (isPortrait ? 30 : 32) : isPortrait ? 36 : 38,
           1,
         );
         nextY += optionHeight + optionGap;
