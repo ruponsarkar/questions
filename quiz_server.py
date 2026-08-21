@@ -8,7 +8,7 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 import pymysql
 from dotenv import load_dotenv
@@ -17,6 +17,7 @@ from pymysql.cursors import DictCursor
 
 ROOT_DIR = Path(__file__).resolve().parent
 WEB_DIR = ROOT_DIR / "web"
+MUSIC_DIR = WEB_DIR / "music"
 DEFAULT_DB = ROOT_DIR / "questions.db"
 
 
@@ -245,6 +246,15 @@ class QuizRequestHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/api/subjects":
             self._send_json({"subjects": self.repository.list_subjects()})
+            return
+        if parsed.path == "/api/music":
+            supported_extensions = {".aac", ".m4a", ".mp3", ".ogg", ".wav", ".webm"}
+            tracks = []
+            if MUSIC_DIR.is_dir():
+                for music_file in sorted(MUSIC_DIR.iterdir()):
+                    if music_file.is_file() and music_file.suffix.lower() in supported_extensions:
+                        tracks.append({"url": f"/music/{quote(music_file.name)}"})
+            self._send_json({"tracks": tracks})
             return
         if parsed.path == "/api/syllabuses":
             params = parse_qs(parsed.query)

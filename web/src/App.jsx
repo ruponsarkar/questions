@@ -261,6 +261,14 @@ export default function App() {
     recording.stopping = true;
     recording.download = download;
     window.clearInterval(recording.frameInterval);
+    if (recording.backgroundMusic) {
+      const { audio, audioContext, destination, source } = recording.backgroundMusic;
+      audio.pause();
+      audio.currentTime = 0;
+      source.disconnect();
+      destination.stream.getTracks().forEach((track) => track.stop());
+      audioContext.close();
+    }
     recording.recorders.forEach(({ recorder }) => {
       if (recorder.state !== "inactive") {
         recorder.stop();
@@ -273,13 +281,35 @@ export default function App() {
     }
   }
 
-  function startQuestionRecording({ subjectName, syllabusName }) {
+  async function startQuestionRecording({ subjectName, syllabusName }) {
     if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
       setRecordingState("unsupported");
       return;
     }
 
     stopQuestionRecording({ download: true, updateState: false });
+
+    let backgroundMusic = null;
+    try {
+      const response = await fetch("/api/music");
+      const { tracks = [] } = await response.json();
+      const selectedTrack = tracks[Math.floor(Math.random() * tracks.length)];
+
+      if (selectedTrack?.url && window.AudioContext) {
+        const audio = new Audio(selectedTrack.url);
+        const audioContext = new AudioContext();
+        const destination = audioContext.createMediaStreamDestination();
+        const source = audioContext.createMediaElementSource(audio);
+        source.connect(destination);
+        audio.loop = true;
+        audio.preload = "auto";
+        await audioContext.resume();
+        await audio.play();
+        backgroundMusic = { audio, audioContext, destination, source };
+      }
+    } catch {
+      // Music is optional: still create the quiz video if a file cannot play.
+    }
 
     const formats = [
       { ratio: "16x9", aspect: "landscape", width: 1920, height: 1080 },
@@ -293,6 +323,7 @@ export default function App() {
       frameInterval: null,
       stopping: false,
       download: true,
+      backgroundMusic,
     };
 
     formats.forEach((format) => {
@@ -300,8 +331,12 @@ export default function App() {
       canvas.width = format.width;
       canvas.height = format.height;
       const chunks = [];
+      const recordingStream = canvas.captureStream(30);
+      backgroundMusic?.destination.stream.getAudioTracks().forEach((track) => {
+        recordingStream.addTrack(track);
+      });
       const recorder = new MediaRecorder(
-        canvas.captureStream(30),
+        recordingStream,
         {
           ...(mimeType ? { mimeType } : {}),
           videoBitsPerSecond: 12_000_000,
@@ -755,7 +790,7 @@ export default function App() {
           const selectedSyllabus = syllabuses.find(
             (syllabus) => syllabus.id === Number(form.syllabusId),
           );
-          startQuestionRecording({
+          void startQuestionRecording({
             subjectName: selectedSubject?.subName,
             syllabusName: selectedSyllabus?.syllabus,
           });
