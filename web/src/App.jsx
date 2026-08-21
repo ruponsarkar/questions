@@ -70,6 +70,27 @@ export default function App() {
     return y + lines * lineHeight;
   }
 
+  function countWrappedLines(context, text, maxWidth, maxLines) {
+    const words = text.split(" ");
+    let line = "";
+    let lines = 1;
+
+    for (const word of words) {
+      const nextLine = line ? `${line} ${word}` : word;
+      if (context.measureText(nextLine).width > maxWidth && line) {
+        lines += 1;
+        line = word;
+        if (lines >= maxLines) {
+          return maxLines;
+        }
+      } else {
+        line = nextLine;
+      }
+    }
+
+    return lines;
+  }
+
   function drawQuestionFrame(canvas, aspect) {
     const context = canvas.getContext("2d");
     const isPortrait = aspect === "portrait";
@@ -110,8 +131,8 @@ export default function App() {
       ? Math.min(1, (performance.now() - advanceAnimationStartedAtRef.current) / 480)
       : 0;
     // Reserve room for a three-line question at the recording font size.
-    const activeCardHeight = isPortrait ? 730 : 730;
-    const waitingCardHeight = isPortrait ? 480 : 450;
+    const activeCardHeight = isPortrait ? 900 : 900;
+    const waitingCardHeight = isPortrait ? 540 : 510;
 
     const drawTimerBadge = (cardTop) => {
       const badgeWidth = isPortrait ? 280 : 270;
@@ -231,7 +252,7 @@ export default function App() {
       nextY += isCompact ? (isPortrait ? 22 : 16) : 26;
 
       const selectedAnswerId = activeSession.selectedAnswers[question.id];
-      const optionHeight = isCompact ? (isPortrait ? 62 : 64) : isPortrait ? 76 : 80;
+      const optionHeight = isCompact ? (isPortrait ? 76 : 74) : isPortrait ? 112 : 110;
       const optionGap = isCompact ? 12 : 14;
       question.options.forEach((option) => {
         const isCorrect = revealed && option.isRight;
@@ -244,14 +265,25 @@ export default function App() {
         context.font = `600 ${
           isCompact ? (isPortrait ? 26 : 28) : isPortrait ? 33 : 35
         }px Manrope, sans-serif`;
+        const optionText = plainText(option.answerHtml);
+        const optionLineHeight = isCompact ? (isPortrait ? 30 : 32) : isPortrait ? 38 : 40;
+        const optionLineCount = countWrappedLines(
+          context,
+          optionText,
+          innerWidth - 44,
+          2,
+        );
         drawWrappedText(
           context,
-          plainText(option.answerHtml),
+          optionText,
           textX + 22,
-          nextY + optionHeight / 2 + (isCompact ? 9 : 11),
+          nextY +
+            optionHeight / 2 -
+            ((optionLineCount - 1) * optionLineHeight) / 2 +
+            (isCompact ? 9 : 11),
           innerWidth - 44,
-          isCompact ? (isPortrait ? 30 : 32) : isPortrait ? 36 : 38,
-          1,
+          optionLineHeight,
+          2,
         );
         nextY += optionHeight + optionGap;
       });
