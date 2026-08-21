@@ -109,8 +109,69 @@ export default function App() {
     const animationProgress = isAdvancing
       ? Math.min(1, (performance.now() - advanceAnimationStartedAtRef.current) / 480)
       : 0;
-    const activeCardHeight = isPortrait ? 670 : 650;
+    // Reserve room for a three-line question at the recording font size.
+    const activeCardHeight = isPortrait ? 730 : 730;
     const waitingCardHeight = isPortrait ? 480 : 450;
+
+    const drawTimerBadge = (cardTop) => {
+      const badgeWidth = isPortrait ? 280 : 270;
+      const badgeHeight = isPortrait ? 112 : 106;
+      const badgeX = width - padding - badgeWidth - 18;
+      // Center the badge on the card edge so half sits outside the card.
+      const badgeY = cardTop - badgeHeight / 2;
+      const badgeCenterX = badgeX + badgeWidth / 2;
+      const badgeCenterY = badgeY + badgeHeight / 2;
+      const zoom = 1 + Math.sin(performance.now() / 380) * 0.035;
+      const badgeGradient = context.createLinearGradient(
+        badgeX,
+        badgeY,
+        badgeX + badgeWidth,
+        badgeY + badgeHeight,
+      );
+      badgeGradient.addColorStop(0, "#fef3c7");
+      badgeGradient.addColorStop(0.52, "#fde68a");
+      badgeGradient.addColorStop(1, "#fbcfe8");
+
+      context.save();
+      context.translate(badgeCenterX, badgeCenterY);
+      context.scale(zoom, zoom);
+      context.translate(-badgeCenterX, -badgeCenterY);
+      context.shadowColor = "rgba(249, 115, 22, 0.35)";
+      context.shadowBlur = 22;
+      context.shadowOffsetY = 7;
+      context.fillStyle = badgeGradient;
+      context.beginPath();
+      context.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, badgeHeight / 2);
+      context.fill();
+
+      context.strokeStyle = "rgba(234, 88, 12, 0.62)";
+      context.lineWidth = 3;
+      context.beginPath();
+      context.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, badgeHeight / 2);
+      context.stroke();
+
+      const ringX = badgeX + 58;
+      const ringY = badgeCenterY;
+      const timerProgress = activeSession.timerSeconds
+        ? Math.max(0, remainingSecondsRef.current / activeSession.timerSeconds)
+        : 0;
+      context.strokeStyle = "rgba(154, 52, 18, 0.18)";
+      context.lineWidth = 11;
+      context.beginPath();
+      context.arc(ringX, ringY, 34, 0, Math.PI * 2);
+      context.stroke();
+      context.strokeStyle = "#ea580c";
+      context.lineCap = "round";
+      context.beginPath();
+      context.arc(ringX, ringY, 34, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * timerProgress);
+      context.stroke();
+      context.fillStyle = "#312e81";
+      context.font = `800 ${isPortrait ? 50 : 46}px Manrope, sans-serif`;
+      context.textAlign = "center";
+      context.fillText(`${remainingSecondsRef.current}s`, badgeX + badgeWidth - 76, badgeY + 72);
+      context.textAlign = "left";
+      context.restore();
+    };
 
     const drawQuestionCard = (question, index, top, cardHeight, opacity) => {
       const isActive = index === 0;
@@ -137,67 +198,20 @@ export default function App() {
       context.font = `700 ${isPortrait ? 18 : 17}px Manrope, sans-serif`;
       context.fillText(`Q${activeSession.activeQuestionIndex + index + 1}`, textX, top + 40);
 
-      if (isActive && !revealed) {
-        const badgeWidth = isPortrait ? 230 : 232;
-        const badgeHeight = isPortrait ? 82 : 82;
-        const badgeX = width - padding - badgeWidth - 18;
-        const badgeY = top + 8;
-        const badgeGradient = context.createLinearGradient(
-          badgeX,
-          badgeY,
-          badgeX + badgeWidth,
-          badgeY + badgeHeight,
-        );
-        badgeGradient.addColorStop(0, "#fef3c7");
-        badgeGradient.addColorStop(0.52, "#fde68a");
-        badgeGradient.addColorStop(1, "#fbcfe8");
-        context.save();
-        context.shadowColor = "rgba(249, 115, 22, 0.35)";
-        context.shadowBlur = 18;
-        context.shadowOffsetY = 6;
-        context.fillStyle = badgeGradient;
-        context.beginPath();
-        context.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, badgeHeight / 2);
-        context.fill();
-        context.restore();
-        context.strokeStyle = "rgba(234, 88, 12, 0.62)";
-        context.lineWidth = 2;
-        context.beginPath();
-        context.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, badgeHeight / 2);
-        context.stroke();
-
-        const ringX = badgeX + 46;
-        const ringY = badgeY + badgeHeight / 2;
-        const timerProgress = activeSession.timerSeconds
-          ? Math.max(0, remainingSecondsRef.current / activeSession.timerSeconds)
-          : 0;
-        context.strokeStyle = "rgba(154, 52, 18, 0.18)";
-        context.lineWidth = 9;
-        context.beginPath();
-        context.arc(ringX, ringY, 26, 0, Math.PI * 2);
-        context.stroke();
-        context.strokeStyle = "#ea580c";
-        context.lineCap = "round";
-        context.beginPath();
-        context.arc(ringX, ringY, 26, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * timerProgress);
-        context.stroke();
-        context.fillStyle = "#312e81";
-        context.font = `800 ${isPortrait ? 38 : 38}px Manrope, sans-serif`;
-        context.textAlign = "center";
-        context.fillText(`${remainingSecondsRef.current}s`, badgeX + badgeWidth - 62, badgeY + 54);
-        context.textAlign = "left";
-      } else if (revealed) {
-        context.fillStyle = "#16733d";
-        context.font = `700 ${isPortrait ? 18 : 17}px Manrope, sans-serif`;
-        context.textAlign = "right";
-        context.fillText("ANSWER SHOWN", width - padding - cardPadding, top + 40);
-        context.textAlign = "left";
-      } else {
-        context.fillStyle = "#60705a";
-        context.font = `700 ${isPortrait ? 18 : 17}px Manrope, sans-serif`;
-        context.textAlign = "right";
-        context.fillText("WAITING", width - padding - cardPadding, top + 40);
-        context.textAlign = "left";
+      if (!(isActive && !revealed)) {
+        if (revealed) {
+          context.fillStyle = "#16733d";
+          context.font = `700 ${isPortrait ? 18 : 17}px Manrope, sans-serif`;
+          context.textAlign = "right";
+          context.fillText("ANSWER SHOWN", width - padding - cardPadding, top + 40);
+          context.textAlign = "left";
+        } else {
+          context.fillStyle = "#60705a";
+          context.font = `700 ${isPortrait ? 18 : 17}px Manrope, sans-serif`;
+          context.textAlign = "right";
+          context.fillText("WAITING", width - padding - cardPadding, top + 40);
+          context.textAlign = "left";
+        }
       }
 
       context.fillStyle = "#1f2a17";
@@ -212,7 +226,7 @@ export default function App() {
         top + (isActive ? 128 : isPortrait ? 106 : 88),
         innerWidth,
         isCompact ? (isPortrait ? 40 : 38) : isPortrait ? 60 : 58,
-        isCompact ? 1 : 2,
+        isCompact ? 1 : 3,
       );
       nextY += isCompact ? (isPortrait ? 22 : 16) : 26;
 
@@ -242,6 +256,10 @@ export default function App() {
         nextY += optionHeight + optionGap;
       });
       context.restore();
+
+      if (isActive && !revealed) {
+        drawTimerBadge(top);
+      }
     };
 
     let cardTop = listTop - animationProgress * (activeCardHeight + cardGap);
