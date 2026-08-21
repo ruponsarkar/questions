@@ -10,6 +10,7 @@ export default function App() {
     questionCount: 10,
     perPage: 5,
     timerSeconds: 15,
+    recordVideo: false,
   });
 
   const [quizState, setQuizState] = useState({
@@ -21,6 +22,341 @@ export default function App() {
 
   const [session, setSession] = useState(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [recordingState, setRecordingState] = useState("idle");
+  const sessionRef = useRef(null);
+  const remainingSecondsRef = useRef(0);
+  const recordingRef = useRef(null);
+  const advanceAnimationStartedAtRef = useRef(0);
+
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
+
+  useEffect(() => {
+    remainingSecondsRef.current = remainingSeconds;
+  }, [remainingSeconds]);
+
+  function plainText(html) {
+    const documentFragment = new DOMParser().parseFromString(html || "", "text/html");
+    return documentFragment.body.textContent?.replace(/\s+/g, " ").trim() || "";
+  }
+
+  function drawWrappedText(context, text, x, y, maxWidth, lineHeight, maxLines) {
+    const words = text.split(" ");
+    let line = "";
+    let lines = 0;
+
+    for (const word of words) {
+      const nextLine = line ? `${line} ${word}` : word;
+
+      if (context.measureText(nextLine).width > maxWidth && line) {
+        context.fillText(line, x, y + lines * lineHeight);
+        lines += 1;
+        line = word;
+
+        if (lines === maxLines) {
+          return y + lines * lineHeight;
+        }
+      } else {
+        line = nextLine;
+      }
+    }
+
+    if (line && lines < maxLines) {
+      context.fillText(line, x, y + lines * lineHeight);
+      lines += 1;
+    }
+
+    return y + lines * lineHeight;
+  }
+
+  function drawQuestionFrame(canvas, aspect) {
+    const context = canvas.getContext("2d");
+    const isPortrait = aspect === "portrait";
+    const width = canvas.width;
+    const height = canvas.height;
+    const padding = isPortrait ? 40 : 56;
+    const contentWidth = width - padding * 2;
+    const activeSession = sessionRef.current;
+
+    context.clearRect(0, 0, width, height);
+    const background = context.createLinearGradient(0, 0, width, height);
+    background.addColorStop(0, "#f8fbf2");
+    background.addColorStop(1, "#e5f0da");
+    context.fillStyle = background;
+    context.fillRect(0, 0, width, height);
+
+    context.fillStyle = "#33601f";
+    context.font = `700 ${isPortrait ? 16 : 18}px Manrope, sans-serif`;
+    context.fillText("TOP QUESTIONS", padding, padding);
+
+    if (!activeSession || activeSession.completed) {
+      context.fillStyle = "#1f2a17";
+      context.font = `800 ${isPortrait ? 40 : 52}px Manrope, sans-serif`;
+      context.fillText("Session complete", padding, height / 2);
+      return;
+    }
+
+    const listTop = padding + (isPortrait ? 38 : 32);
+    const cardGap = isPortrait ? 18 : 14;
+    const questions = activeSession.questions.slice(
+      activeSession.activeQuestionIndex,
+      activeSession.activeQuestionIndex + 3,
+    );
+    const isAdvancing = Boolean(activeSession.advancingQuestionId);
+    const animationProgress = isAdvancing
+      ? Math.min(1, (performance.now() - advanceAnimationStartedAtRef.current) / 480)
+      : 0;
+    const activeCardHeight = isPortrait ? 372 : 340;
+    const waitingCardHeight = isPortrait ? 280 : 256;
+
+    const drawQuestionCard = (question, index, top, cardHeight, opacity) => {
+      const isActive = index === 0;
+      const isCompact = !isActive;
+      const revealed = activeSession.revealedQuestionIds.includes(question.id);
+      const cardPadding = isPortrait ? 26 : 30;
+      const textX = padding + cardPadding;
+      const innerWidth = contentWidth - cardPadding * 2;
+
+      context.save();
+      context.globalAlpha = opacity;
+      context.beginPath();
+      context.roundRect(padding, top, contentWidth, cardHeight, 24);
+      context.clip();
+      context.fillStyle = isActive
+        ? "rgba(223, 241, 201, 0.88)"
+        : "rgba(255, 255, 255, 0.82)";
+      context.fill();
+      context.strokeStyle = isActive ? "rgba(93, 159, 61, 0.56)" : "rgba(67, 91, 39, 0.12)";
+      context.lineWidth = 2;
+      context.stroke();
+
+      context.fillStyle = "#60705a";
+      context.font = `700 ${isPortrait ? 15 : 14}px Manrope, sans-serif`;
+      context.fillText(`Q${activeSession.activeQuestionIndex + index + 1}`, textX, top + 32);
+
+      if (isActive && !revealed) {
+        const badgeX = width - padding - 170;
+        const badgeY = top + 10;
+        const badgeGradient = context.createLinearGradient(
+          badgeX,
+          badgeY,
+          badgeX + 144,
+          badgeY + 54,
+        );
+        badgeGradient.addColorStop(0, "#fef3c7");
+        badgeGradient.addColorStop(0.52, "#fde68a");
+        badgeGradient.addColorStop(1, "#fbcfe8");
+        context.save();
+        context.shadowColor = "rgba(249, 115, 22, 0.35)";
+        context.shadowBlur = 18;
+        context.shadowOffsetY = 6;
+        context.fillStyle = badgeGradient;
+        context.beginPath();
+        context.roundRect(badgeX, badgeY, 144, 54, 27);
+        context.fill();
+        context.restore();
+        context.strokeStyle = "rgba(234, 88, 12, 0.62)";
+        context.lineWidth = 2;
+        context.beginPath();
+        context.roundRect(badgeX, badgeY, 144, 54, 27);
+        context.stroke();
+
+        const ringX = badgeX + 31;
+        const ringY = badgeY + 27;
+        const timerProgress = activeSession.timerSeconds
+          ? Math.max(0, remainingSecondsRef.current / activeSession.timerSeconds)
+          : 0;
+        context.strokeStyle = "rgba(154, 52, 18, 0.18)";
+        context.lineWidth = 6;
+        context.beginPath();
+        context.arc(ringX, ringY, 16, 0, Math.PI * 2);
+        context.stroke();
+        context.strokeStyle = "#ea580c";
+        context.lineCap = "round";
+        context.beginPath();
+        context.arc(ringX, ringY, 16, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * timerProgress);
+        context.stroke();
+        context.fillStyle = "#312e81";
+        context.font = `800 ${isPortrait ? 25 : 23}px Manrope, sans-serif`;
+        context.textAlign = "center";
+        context.fillText(`${remainingSecondsRef.current}s`, badgeX + 100, badgeY + 35);
+        context.textAlign = "left";
+      } else if (revealed) {
+        context.fillStyle = "#16733d";
+        context.font = `700 ${isPortrait ? 15 : 14}px Manrope, sans-serif`;
+        context.textAlign = "right";
+        context.fillText("ANSWER SHOWN", width - padding - cardPadding, top + 32);
+        context.textAlign = "left";
+      } else {
+        context.fillStyle = "#60705a";
+        context.font = `700 ${isPortrait ? 15 : 14}px Manrope, sans-serif`;
+        context.textAlign = "right";
+        context.fillText("WAITING", width - padding - cardPadding, top + 32);
+        context.textAlign = "left";
+      }
+
+      context.fillStyle = "#1f2a17";
+      context.font = `700 ${
+        // isCompact ? (isPortrait ? 17 : 16) : isPortrait ? 22 : 20
+        isCompact ? (isPortrait ? 22 : 20) : isPortrait ? 32 : 30
+      }px Manrope, sans-serif`;
+      let nextY = drawWrappedText(
+        context,
+        plainText(question.questionHtml),
+        textX,
+        top + (isActive ? 82 : 68),
+        innerWidth,
+        isCompact ? (isPortrait ? 22 : 20) : isPortrait ? 29 : 26,
+        isCompact ? 1 : 2,
+      );
+      nextY += 14;
+
+      const selectedAnswerId = activeSession.selectedAnswers[question.id];
+      const optionHeight = isCompact ? (isPortrait ? 34 : 30) : isPortrait ? 43 : 38;
+      const optionGap = isCompact ? 6 : 8;
+      question.options.forEach((option) => {
+        const isCorrect = revealed && option.isRight;
+        const isSelected = selectedAnswerId === option.id;
+        context.fillStyle = isCorrect ? "#3c7a24" : isSelected ? "#dff1c9" : "#fbfcf8";
+        context.beginPath();
+        context.roundRect(textX, nextY, innerWidth, optionHeight, 12);
+        context.fill();
+        context.fillStyle = isCorrect ? "#ffffff" : "#1f2a17";
+        context.font = `600 ${
+          isCompact ? (isPortrait ? 13 : 12) : isPortrait ? 16 : 15
+        }px Manrope, sans-serif`;
+        drawWrappedText(
+          context,
+          plainText(option.answerHtml),
+          textX + 12,
+          nextY + (isCompact ? optionHeight / 2 + 4 : 24),
+          innerWidth - 24,
+          18,
+          1,
+        );
+        nextY += optionHeight + optionGap;
+      });
+      context.restore();
+    };
+
+    let cardTop = listTop - animationProgress * (activeCardHeight + cardGap);
+    questions.forEach((question, index) => {
+      const cardHeight = index === 0 ? activeCardHeight : waitingCardHeight;
+      drawQuestionCard(question, index, cardTop, cardHeight, index === 0 ? 1 - animationProgress : 1);
+      cardTop += cardHeight + cardGap;
+    });
+  }
+
+  function stopQuestionRecording({ download = true, updateState = true } = {}) {
+    const recording = recordingRef.current;
+    if (!recording || recording.stopping) {
+      return;
+    }
+
+    recording.stopping = true;
+    recording.download = download;
+    window.clearInterval(recording.frameInterval);
+    recording.recorders.forEach(({ recorder }) => {
+      if (recorder.state !== "inactive") {
+        recorder.stop();
+      }
+    });
+    recordingRef.current = null;
+
+    if (updateState) {
+      setRecordingState(download ? "saved" : "idle");
+    }
+  }
+
+  function startQuestionRecording({ subjectName, syllabusName }) {
+    if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
+      setRecordingState("unsupported");
+      return;
+    }
+
+    stopQuestionRecording({ download: true, updateState: false });
+
+    const formats = [
+      { ratio: "16x9", aspect: "landscape", width: 1920, height: 1080 },
+      { ratio: "9x16", aspect: "portrait", width: 1080, height: 1920 },
+    ];
+    const mimeType = ["video/webm;codecs=vp9", "video/webm", "video/mp4"].find(
+      (type) => MediaRecorder.isTypeSupported(type),
+    );
+    const recording = {
+      recorders: [],
+      frameInterval: null,
+      stopping: false,
+      download: true,
+    };
+
+    formats.forEach((format) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = format.width;
+      canvas.height = format.height;
+      const chunks = [];
+      const recorder = new MediaRecorder(
+        canvas.captureStream(30),
+        {
+          ...(mimeType ? { mimeType } : {}),
+          videoBitsPerSecond: 12_000_000,
+        },
+      );
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size) {
+          chunks.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        if (!recording.download || !chunks.length) {
+          return;
+        }
+
+        const video = new Blob(chunks, { type: mimeType || "video/webm" });
+        const downloadLink = document.createElement("a");
+        downloadLink.href = URL.createObjectURL(video);
+        const safeNamePart = (value) =>
+          String(value || "Quiz")
+            .replace(/[\\/:*?"<>|]/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
+        downloadLink.download = `${safeNamePart(subjectName)} ${safeNamePart(
+          syllabusName,
+        )} ${format.ratio}.${
+          mimeType?.includes("mp4") ? "mp4" : "webm"
+        }`;
+        downloadLink.click();
+        window.setTimeout(() => URL.revokeObjectURL(downloadLink.href), 1000);
+      };
+
+      recording.recorders.push({ canvas, format, recorder });
+    });
+
+    const renderFrames = () => {
+      recording.recorders.forEach(({ canvas, format }) => {
+        drawQuestionFrame(canvas, format.aspect);
+      });
+    };
+
+    renderFrames();
+    recording.recorders.forEach(({ recorder }) => recorder.start(1000));
+    recording.frameInterval = window.setInterval(renderFrames, 1000 / 30);
+    recordingRef.current = recording;
+    setRecordingState("recording");
+  }
+
+  useEffect(() => {
+    return () => stopQuestionRecording({ download: false, updateState: false });
+  }, []);
+
+  useEffect(() => {
+    if (session?.completed && recordingRef.current) {
+      stopQuestionRecording();
+    }
+  }, [session?.completed]);
 
   /*
    * ============================================================
@@ -266,6 +602,7 @@ export default function App() {
         }
 
         /* Start the upward-collapse animation before changing the list. */
+        advanceAnimationStartedAtRef.current = performance.now();
         return {
           ...current,
           advancingQuestionId:
@@ -316,11 +653,11 @@ export default function App() {
    * ============================================================
    */
   function updateField(event) {
-    const { name, value } = event.target;
+    const { name, value, type, checked } = event.target;
 
     setForm((current) => ({
       ...current,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   }
 
@@ -367,7 +704,7 @@ export default function App() {
           questions: data.questions,
         });
 
-        setSession({
+        const newSession = {
           questions: data.questions,
 
           perPage: Number(form.perPage),
@@ -400,9 +737,27 @@ export default function App() {
            * are displayed again.
            */
           showAllQuestions: false,
-        });
+        };
+
+        sessionRef.current = newSession;
+        remainingSecondsRef.current = Number(form.timerSeconds);
+        setSession(newSession);
 
         setRemainingSeconds(Number(form.timerSeconds));
+        if (form.recordVideo) {
+          const selectedSubject = subjects.find(
+            (subject) => subject.id === Number(form.subjectId),
+          );
+          const selectedSyllabus = syllabuses.find(
+            (syllabus) => syllabus.id === Number(form.syllabusId),
+          );
+          startQuestionRecording({
+            subjectName: selectedSubject?.subName,
+            syllabusName: selectedSyllabus?.syllabus,
+          });
+        } else {
+          setRecordingState("idle");
+        }
       })
       .catch((error) => {
         setSession(null);
@@ -543,6 +898,7 @@ export default function App() {
    * ============================================================
    */
   function resetQuiz() {
+    stopQuestionRecording();
     setSession(null);
     setRemainingSeconds(0);
   }
@@ -647,7 +1003,7 @@ export default function App() {
       <style>{`
         .timer-wrapper {
           position: absolute;
-          top: 14px;
+          top: 8px;
           right: 14px;
           z-index: 2;
           pointer-events: none;
@@ -656,19 +1012,25 @@ export default function App() {
         .timer-clock {
           display: inline-flex;
           align-items: center;
-          gap: 6px;
-          padding: 6px 10px 6px 6px;
-          border: 1px solid rgba(79, 70, 229, 0.25);
+          gap: 9px;
+          padding: 8px 15px 8px 8px;
+          border: 2px solid rgba(249, 115, 22, 0.52);
           border-radius: 999px;
-          color: #312e81;
-          background: linear-gradient(135deg, #eef2ff, #ffffff);
-          box-shadow: 0 8px 20px rgba(79, 70, 229, 0.2);
+          color: #9a3412;
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 45%, #fbcfe8 100%);
+          box-shadow:
+            0 8px 20px rgba(249, 115, 22, 0.28),
+            0 0 0 4px rgba(254, 240, 138, 0.45);
         }
 
         .timer-svg {
-          width: 32px;
-          height: 32px;
+          width: 52px;
+          height: 52px;
           display: block;
+        }
+
+        .timer-clock .progress {
+          stroke: #ea580c;
         }
 
         .timer-clock .progress {
@@ -679,9 +1041,9 @@ export default function App() {
 
         .timer-number {
           font-weight: 800;
-          font-size: 1.2rem;
+          font-size: 1.8rem;
           line-height: 1;
-          min-width: 30px;
+          min-width: 48px;
           text-align: center;
           display: inline-block;
         }
@@ -711,6 +1073,67 @@ export default function App() {
           color: #16a34a;
         }
 
+        .recording-button {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 14px;
+          border: 0;
+          border-radius: 999px;
+          color: #ffffff;
+          font: inherit;
+          font-weight: 800;
+          cursor: pointer;
+          background: #b23f3f;
+          box-shadow: 0 6px 16px rgba(178, 63, 63, 0.22);
+        }
+
+        .recording-choice {
+          display: flex !important;
+          align-items: center;
+          gap: 12px;
+          padding: 14px;
+          border: 1px solid rgba(93, 159, 61, 0.26);
+          border-radius: 16px;
+          background: rgba(223, 241, 201, 0.58);
+          cursor: pointer;
+        }
+
+        .recording-choice input {
+          width: 20px;
+          height: 20px;
+          accent-color: #5d9f3d;
+        }
+
+        .recording-choice span {
+          display: grid;
+          gap: 3px;
+        }
+
+        .recording-choice small {
+          color: #60705a;
+          line-height: 1.35;
+        }
+
+        .recording-button span {
+          width: 9px;
+          height: 9px;
+          border-radius: 50%;
+          background: #ffffff;
+          animation: recording-dot 1.2s ease-in-out infinite;
+        }
+
+        @keyframes recording-dot {
+          50% {
+            opacity: 0.35;
+            transform: scale(0.75);
+          }
+        }
+
+        .quiz-toolbar {
+          grid-template-columns: repeat(5, auto);
+        }
+
         .show-all-wrapper {
           display: flex;
           justify-content: center;
@@ -737,6 +1160,12 @@ export default function App() {
             transform 0.48s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        .question-header {
+          min-height: 60px;
+          padding-right: 158px;
+          align-items: flex-start;
+        }
+
         .question-card.exiting {
           max-height: 0;
           margin: 0;
@@ -749,6 +1178,18 @@ export default function App() {
 
         .question-card:last-child {
           margin-bottom: 0;
+        }
+
+        @media (max-width: 960px) {
+          .quiz-toolbar {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .quiz-toolbar {
+            grid-template-columns: 1fr;
+          }
         }
 
         .question-card.active {
@@ -765,7 +1206,7 @@ export default function App() {
           ======================================================== */}
       <section className="hero">
         <div>
-          <p className="eyebrow">React Quiz Interface</p>
+          <p className="eyebrow">Top Questions</p>
 
           <h1>
             Pick a subject, tune the timer, and run a focused practice session.
@@ -891,6 +1332,20 @@ export default function App() {
             </label>
           </div>
 
+          <label className="recording-choice">
+            <input
+              type="checkbox"
+              name="recordVideo"
+              checked={form.recordVideo}
+              onChange={updateField}
+            />
+
+            <span>
+              <strong>Record quiz videos</strong>
+              <small>Save matching 16:9 and 9:16 videos when the quiz ends.</small>
+            </span>
+          </label>
+
           {/* Start button */}
           <button
             className="primary-button"
@@ -967,6 +1422,28 @@ export default function App() {
                         ? "Answer shown"
                         : `${remainingSeconds}s`}
                   </strong>
+                </div>
+
+                <div>
+                  <p className="toolbar-label">Video</p>
+
+                  {recordingState === "recording" ? (
+                    <button
+                      className="recording-button"
+                      type="button"
+                      onClick={() => stopQuestionRecording()}
+                    >
+                      <span aria-hidden="true" /> Stop recording
+                    </button>
+                  ) : (
+                    <strong>
+                      {recordingState === "saved"
+                        ? "Saved"
+                        : recordingState === "unsupported"
+                          ? "Unavailable"
+                          : "Off"}
+                    </strong>
+                  )}
                 </div>
 
                 {/* Reset */}
