@@ -96,6 +96,7 @@ class QuizRepository:
                 COUNT(DISTINCT q.q_id) AS questionCount
             FROM subjects s
             JOIN questions q ON q.subject_id = s.id
+            WHERE q.isApprove = 1
             GROUP BY s.id, s.subName, s.class, s.examName
             HAVING COUNT(DISTINCT q.q_id) > 0
             ORDER BY s.subName ASC
@@ -113,7 +114,7 @@ class QuizRepository:
                 COUNT(DISTINCT q.q_id) AS questionCount
             FROM syllabuses sy
             JOIN questions q ON q.syllabus_id = sy.id
-            WHERE sy.subject_id = ?
+            WHERE sy.subject_id = ? AND q.isApprove = 1
             GROUP BY sy.id, sy.syllabus, sy.subject_id, sy.isActive
             HAVING COUNT(DISTINCT q.q_id) > 0
             ORDER BY sy.syllabus ASC
@@ -126,7 +127,7 @@ class QuizRepository:
             """
             SELECT COUNT(DISTINCT q.q_id) AS total
             FROM questions q
-            WHERE q.subject_id = ? AND q.syllabus_id = ?
+            WHERE q.subject_id = ? AND q.syllabus_id = ? AND q.isApprove = 1
             """,
             (subject_id, syllabus_id),
         )
@@ -167,7 +168,7 @@ class QuizRepository:
         return f"""
             SELECT q.q_id, q.question, q.description
             FROM questions q
-            WHERE q.subject_id = ? AND q.syllabus_id = ?
+            WHERE q.subject_id = ? AND q.syllabus_id = ? AND q.isApprove = 1
             ORDER BY {random_fn}
             LIMIT {limit}
         """
@@ -231,6 +232,7 @@ class QuizRepository:
               AND a.isRight != 1
               AND q.syllabus_id = ?
               AND q.subject_id = ?
+              AND q.isApprove = 1
             ORDER BY {random_fn}
             LIMIT {limit}
         """
