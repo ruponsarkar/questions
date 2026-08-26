@@ -41,54 +41,69 @@ export default function App() {
     return documentFragment.body.textContent?.replace(/\s+/g, " ").trim() || "";
   }
 
-  function drawWrappedText(context, text, x, y, maxWidth, lineHeight, maxLines) {
-    const words = text.split(" ");
-    let line = "";
-    let lines = 0;
+  // Keep each subject visually recognizable in exported videos. The subject id
+  // makes the result stable across recordings, while the name is a fallback
+  // for subjects that do not have an id yet.
+  function getVideoTheme(subject) {
+    const identity = String(subject?.id ?? subject?.subName ?? "quiz");
+    const hash = [...identity].reduce(
+      (value, character) => (value * 31 + character.charCodeAt(0)) >>> 0,
+      7,
+    );
+    const hue = hash % 360;
 
-    for (const word of words) {
-      const nextLine = line ? `${line} ${word}` : word;
-
-      if (context.measureText(nextLine).width > maxWidth && line) {
-        context.fillText(line, x, y + lines * lineHeight);
-        lines += 1;
-        line = word;
-
-        if (lines === maxLines) {
-          return y + lines * lineHeight;
-        }
-      } else {
-        line = nextLine;
-      }
-    }
-
-    if (line && lines < maxLines) {
-      context.fillText(line, x, y + lines * lineHeight);
-      lines += 1;
-    }
-
-    return y + lines * lineHeight;
+    return {
+      hue,
+      start: `hsl(${hue} 68% 96%)`,
+      end: `hsl(${(hue + 32) % 360} 62% 84%)`,
+      accent: `hsl(${hue} 56% 31%)`,
+      card: `hsla(${hue} 62% 91% / 0.9)`,
+      border: `hsla(${hue} 52% 40% / 0.5)`,
+    };
   }
 
-  function countWrappedLines(context, text, maxWidth, maxLines) {
+  function getWrappedLines(context, text, maxWidth) {
     const words = text.split(" ");
     let line = "";
-    let lines = 1;
+    const lines = [];
 
     for (const word of words) {
       const nextLine = line ? `${line} ${word}` : word;
-      if (context.measureText(nextLine).width > maxWidth && line) {
-        lines += 1;
+      if (context.measureText(nextLine).width <= maxWidth) {
+        line = nextLine;
+        continue;
+      }
+
+      if (line) {
+        lines.push(line);
         line = word;
-        if (lines >= maxLines) {
-          return maxLines;
-        }
       } else {
         line = nextLine;
       }
+
+      // A long URL or unbroken word should wrap too, rather than extending
+      // beyond the card edge.
+      while (context.measureText(line).width > maxWidth) {
+        let splitAt = line.length - 1;
+        while (splitAt > 1 && context.measureText(line.slice(0, splitAt)).width > maxWidth) {
+          splitAt -= 1;
+        }
+        lines.push(line.slice(0, splitAt));
+        line = line.slice(splitAt);
+      }
+    }
+
+    if (line) {
+      lines.push(line);
     }
 
     return lines;
+  }
+
+  function drawWrappedText(context, text, x, y, maxWidth, lineHeight) {
+    const lines = getWrappedLines(context, text, maxWidth);
+    lines.forEach((line, index) => context.fillText(line, x, y + index * lineHeight));
+    return y + lines.length * lineHeight;
   }
 
   function drawQuestionFrame(canvas, aspect) {
@@ -101,15 +116,23 @@ export default function App() {
     const activeSession = sessionRef.current;
 
     context.clearRect(0, 0, width, height);
+    const theme = activeSession?.videoTheme || getVideoTheme();
     const background = context.createLinearGradient(0, 0, width, height);
-    background.addColorStop(0, "#f8fbf2");
-    background.addColorStop(1, "#e5f0da");
+    background.addColorStop(0, theme.start);
+    background.addColorStop(1, theme.end);
     context.fillStyle = background;
     context.fillRect(0, 0, width, height);
 
-    context.fillStyle = "#33601f";
+    context.fillStyle = theme.accent;
     context.font = `700 ${isPortrait ? 22 : 24}px Manrope, sans-serif`;
-    context.fillText("TOP QUESTIONS", padding, padding);
+    const videoHeading = activeSession?.videoTitle
+      ? `TOP QUESTIONS (${activeSession.videoTitle})`
+      : "TOP QUESTIONS";
+    const headingLineHeight = isPortrait ? 22 : 24;
+    const headingLines = getWrappedLines(context, videoHeading, width - padding * 2);
+    headingLines.forEach((line, index) =>
+      context.fillText(line, padding, padding + index * headingLineHeight),
+    );
 
     if (!activeSession || activeSession.completed) {
       context.fillStyle = "#1f2a17";
@@ -118,7 +141,8 @@ export default function App() {
       return;
     }
 
-    const listTop = padding + (isPortrait ? 46 : 40);
+    const listTop =
+      padding + headingLines.length * headingLineHeight + (isPortrait ? 24 : 16);
     const cardGap = isPortrait ? 20 : 16;
     const questions = activeSession.questions.slice(
       activeSession.activeQuestionIndex,
@@ -207,11 +231,9 @@ export default function App() {
       context.beginPath();
       context.roundRect(padding, top, contentWidth, cardHeight, 24);
       context.clip();
-      context.fillStyle = isActive
-        ? "rgba(223, 241, 201, 0.88)"
-        : "rgba(255, 255, 255, 0.82)";
+      context.fillStyle = isActive ? theme.card : "rgba(255, 255, 255, 0.82)";
       context.fill();
-      context.strokeStyle = isActive ? "rgba(93, 159, 61, 0.56)" : "rgba(67, 91, 39, 0.12)";
+      context.strokeStyle = isActive ? theme.border : "rgba(67, 91, 39, 0.12)";
       context.lineWidth = 2;
       context.stroke();
 
@@ -235,57 +257,82 @@ export default function App() {
         }
       }
 
+      const questionText = plainText(question.questionHtml);
+      const baseQuestionFont = isCompact ? (isPortrait ? 34 : 32) : isPortrait ? 52 : 50;
+      const baseQuestionLineHeight = isCompact ? (isPortrait ? 40 : 38) : isPortrait ? 60 : 58;
+      const baseOptionFont = isCompact ? (isPortrait ? 26 : 28) : isPortrait ? 33 : 35;
+      const baseOptionLineHeight = isCompact ? (isPortrait ? 30 : 32) : isPortrait ? 38 : 40;
+      const optionGap = isCompact ? 12 : 14;
+      const minimumOptionHeight = isCompact ? (isPortrait ? 76 : 74) : isPortrait ? 112 : 110;
+      const questionTop = top + (isActive ? 128 : isPortrait ? 106 : 88);
+
+      // Long questions and answers shrink together until the complete active
+      // card fits in the video frame. This replaces the previous 3-line / 2-line
+      // limits that silently removed trailing text.
+      let textScale = 1;
+      let questionLines = [];
+      let optionLayouts = [];
+      const availableTextHeight = cardHeight - (questionTop - top) - 32;
+      do {
+        context.font = `700 ${baseQuestionFont * textScale}px Manrope, sans-serif`;
+        questionLines = getWrappedLines(context, questionText, innerWidth);
+        const questionHeight = questionLines.length * baseQuestionLineHeight * textScale;
+        context.font = `600 ${baseOptionFont * textScale}px Manrope, sans-serif`;
+        optionLayouts = question.options.map((option) => {
+          const lines = getWrappedLines(context, plainText(option.answerHtml), innerWidth - 44);
+          const lineHeight = baseOptionLineHeight * textScale;
+          return {
+            lines,
+            lineHeight,
+            height: Math.max(minimumOptionHeight * textScale, lines.length * lineHeight + 30 * textScale),
+          };
+        });
+        const contentHeight =
+          questionHeight +
+          (isCompact ? (isPortrait ? 22 : 16) : 26) * textScale +
+          optionLayouts.reduce((total, option) => total + option.height, 0) +
+          optionGap * textScale * (question.options.length - 1);
+        if (contentHeight <= availableTextHeight || textScale <= 0.35) {
+          break;
+        }
+        textScale -= 0.05;
+      } while (true);
+
       context.fillStyle = "#1f2a17";
-      context.font = `700 ${
-        // isCompact ? (isPortrait ? 17 : 16) : isPortrait ? 22 : 20
-        isCompact ? (isPortrait ? 34 : 32) : isPortrait ? 52 : 50
-      }px Manrope, sans-serif`;
+      context.font = `700 ${baseQuestionFont * textScale}px Manrope, sans-serif`;
       let nextY = drawWrappedText(
         context,
-        plainText(question.questionHtml),
+        questionText,
         textX,
-        top + (isActive ? 128 : isPortrait ? 106 : 88),
+        questionTop,
         innerWidth,
-        isCompact ? (isPortrait ? 40 : 38) : isPortrait ? 60 : 58,
-        isCompact ? 1 : 3,
+        baseQuestionLineHeight * textScale,
       );
-      nextY += isCompact ? (isPortrait ? 22 : 16) : 26;
+      nextY += (isCompact ? (isPortrait ? 22 : 16) : 26) * textScale;
 
       const selectedAnswerId = activeSession.selectedAnswers[question.id];
-      const optionHeight = isCompact ? (isPortrait ? 76 : 74) : isPortrait ? 112 : 110;
-      const optionGap = isCompact ? 12 : 14;
-      question.options.forEach((option) => {
+      question.options.forEach((option, optionIndex) => {
+        const optionLayout = optionLayouts[optionIndex];
         const isCorrect = revealed && option.isRight;
         const isSelected = selectedAnswerId === option.id;
         context.fillStyle = isCorrect ? "#3c7a24" : isSelected ? "#dff1c9" : "#fbfcf8";
         context.beginPath();
-        context.roundRect(textX, nextY, innerWidth, optionHeight, 18);
+        context.roundRect(textX, nextY, innerWidth, optionLayout.height, 18);
         context.fill();
         context.fillStyle = isCorrect ? "#ffffff" : "#1f2a17";
-        context.font = `600 ${
-          isCompact ? (isPortrait ? 26 : 28) : isPortrait ? 33 : 35
-        }px Manrope, sans-serif`;
-        const optionText = plainText(option.answerHtml);
-        const optionLineHeight = isCompact ? (isPortrait ? 30 : 32) : isPortrait ? 38 : 40;
-        const optionLineCount = countWrappedLines(
-          context,
-          optionText,
-          innerWidth - 44,
-          2,
-        );
+        context.font = `600 ${baseOptionFont * textScale}px Manrope, sans-serif`;
         drawWrappedText(
           context,
-          optionText,
+          plainText(option.answerHtml),
           textX + 22,
           nextY +
-            optionHeight / 2 -
-            ((optionLineCount - 1) * optionLineHeight) / 2 +
-            (isCompact ? 9 : 11),
+            optionLayout.height / 2 -
+            ((optionLayout.lines.length - 1) * optionLayout.lineHeight) / 2 +
+            (isCompact ? 9 : 11) * textScale,
           innerWidth - 44,
-          optionLineHeight,
-          2,
+          optionLayout.lineHeight,
         );
-        nextY += optionHeight + optionGap;
+        nextY += optionLayout.height + optionGap * textScale;
       });
       context.restore();
 
@@ -793,8 +840,19 @@ export default function App() {
           questions: data.questions,
         });
 
+        const selectedSubject = subjects.find(
+          (subject) => subject.id === Number(form.subjectId),
+        );
+        const selectedSyllabus = syllabuses.find(
+          (syllabus) => syllabus.id === Number(form.syllabusId),
+        );
         const newSession = {
           questions: data.questions,
+
+          videoTheme: getVideoTheme(selectedSubject),
+          videoTitle: [selectedSubject?.subName, selectedSyllabus?.syllabus]
+            .filter(Boolean)
+            .join(" - "),
 
           perPage: Number(form.perPage),
 
@@ -834,12 +892,6 @@ export default function App() {
 
         setRemainingSeconds(Number(form.timerSeconds));
         if (form.recordVideo) {
-          const selectedSubject = subjects.find(
-            (subject) => subject.id === Number(form.subjectId),
-          );
-          const selectedSyllabus = syllabuses.find(
-            (syllabus) => syllabus.id === Number(form.syllabusId),
-          );
           void startQuestionRecording({
             subjectName: selectedSubject?.subName,
             syllabusName: selectedSyllabus?.syllabus,
