@@ -8,7 +8,7 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 import pymysql
 from dotenv import load_dotenv
@@ -17,6 +17,7 @@ from pymysql.cursors import DictCursor
 
 ROOT_DIR = Path(__file__).resolve().parent
 WEB_DIR = ROOT_DIR / "web"
+MUSIC_DIR = WEB_DIR / "music"
 DEFAULT_DB = ROOT_DIR / "questions.db"
 
 
@@ -95,6 +96,7 @@ class QuizRepository:
                 COUNT(DISTINCT q.q_id) AS questionCount
             FROM subjects s
             JOIN questions q ON q.subject_id = s.id
+            WHERE q.isApprove = 1
             GROUP BY s.id, s.subName, s.class, s.examName
             HAVING COUNT(DISTINCT q.q_id) > 0
             ORDER BY s.subName ASC
@@ -112,7 +114,7 @@ class QuizRepository:
                 COUNT(DISTINCT q.q_id) AS questionCount
             FROM syllabuses sy
             JOIN questions q ON q.syllabus_id = sy.id
-            WHERE sy.subject_id = ?
+            WHERE sy.subject_id = ? AND q.isApprove = 1
             GROUP BY sy.id, sy.syllabus, sy.subject_id, sy.isActive
             HAVING COUNT(DISTINCT q.q_id) > 0
             ORDER BY sy.syllabus ASC
@@ -125,7 +127,7 @@ class QuizRepository:
             """
             SELECT COUNT(DISTINCT q.q_id) AS total
             FROM questions q
-            WHERE q.subject_id = ? AND q.syllabus_id = ?
+            WHERE q.subject_id = ? AND q.syllabus_id = ? AND q.isApprove = 1
             """,
             (subject_id, syllabus_id),
         )
@@ -166,7 +168,7 @@ class QuizRepository:
         return f"""
             SELECT q.q_id, q.question, q.description
             FROM questions q
-            WHERE q.subject_id = ? AND q.syllabus_id = ?
+            WHERE q.subject_id = ? AND q.syllabus_id = ? AND q.isApprove = 1
             ORDER BY {random_fn}
             LIMIT {limit}
         """
@@ -230,6 +232,7 @@ class QuizRepository:
               AND a.isRight != 1
               AND q.syllabus_id = ?
               AND q.subject_id = ?
+              AND q.isApprove = 1
             ORDER BY {random_fn}
             LIMIT {limit}
         """
@@ -245,6 +248,15 @@ class QuizRequestHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/api/subjects":
             self._send_json({"subjects": self.repository.list_subjects()})
+            return
+        if parsed.path == "/api/music":
+            supported_extensions = {".aac", ".m4a", ".mp3", ".ogg", ".wav", ".webm"}
+            tracks = []
+            if MUSIC_DIR.is_dir():
+                for music_file in sorted(MUSIC_DIR.iterdir()):
+                    if music_file.is_file() and music_file.suffix.lower() in supported_extensions:
+                        tracks.append({"url": f"/music/{quote(music_file.name)}"})
+            self._send_json({"tracks": tracks})
             return
         if parsed.path == "/api/syllabuses":
             params = parse_qs(parsed.query)

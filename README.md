@@ -116,3 +116,7 @@ http://localhost:8000
 ```
 
 The server uses the same `.env` database settings as the fetch scripts, so it can read from MySQL or a local SQLite file.
+
+Video background music
+
+To include background music in recorded quiz videos, add audio files to `web/music/` and restart the server. Supported formats are `.mp3`, `.wav`, `.m4a`, `.aac`, `.ogg`, and `.webm`. Each recording randomly selects one track, loops it when it is shorter than the quiz, and stops it with the video when the quiz ends.

@@ -1,7 +1,8 @@
 :root {
   --bg: #f4f6f1;
   --bg-accent: #eef6df;
-  --surface: rgba(255, 255, 255, 0.88);
+  /* --surface: rgba(255, 255, 255, 0.88); */
+  --surface: pink;
   --surface-strong: #ffffff;
   --line: rgba(67, 91, 39, 0.12);
   --text: #1f2a17;
@@ -118,6 +119,7 @@ select {
   border-radius: 30px;
   background: rgba(255, 255, 255, 0.52);
   backdrop-filter: blur(18px);
+  min-height: 100vh;
 }
 
 .config-card,
@@ -282,6 +284,12 @@ select {
 .option-button.correct {
   color: #fff;
   background: linear-gradient(135deg, #3c7a24, #67b645);
+}
+
+.option-button span p {
+  margin: 0;
+  font-size: 0.9rem;
+
 }
 
 .option-button:disabled {
