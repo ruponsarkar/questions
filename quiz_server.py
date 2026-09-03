@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+import asyncio
 import json
 import os
 import random
 import sqlite3
+import tempfile
 from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -11,6 +13,7 @@ from typing import Any
 from urllib.parse import parse_qs, quote, urlparse
 
 import pymysql
+import edge_tts
 from dotenv import load_dotenv
 from pymysql.cursors import DictCursor
 
@@ -246,6 +249,9 @@ class QuizRequestHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
+        if parsed.path == "/api/narration/voices":
+            self._send_json({"voices": self._list_narration_voices()})
+            return
         if parsed.path == "/api/subjects":
             self._send_json({"subjects": self.repository.list_subjects()})
             return
@@ -267,13 +273,17 @@ class QuizRequestHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
-        if parsed.path != "/api/quiz":
+        if parsed.path not in {"/api/quiz", "/api/narration"}:
             self.send_error(HTTPStatus.NOT_FOUND, "Unknown API endpoint")
             return
 
         content_length = int(self.headers.get("Content-Length", "0"))
         raw_body = self.rfile.read(content_length or 0)
         body = json.loads(raw_body or "{}")
+
+        if parsed.path == "/api/narration":
+            self._send_narration_audio(body)
+            return
 
         subject_id = int(body.get("subjectId") or 0)
         syllabus_id = int(body.get("syllabusId") or 0)
@@ -297,6 +307,60 @@ class QuizRequestHandler(SimpleHTTPRequestHandler):
         data = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _list_narration_voices(self) -> list[dict[str, str]]:
+        try:
+            voices = asyncio.run(edge_tts.list_voices())
+        except Exception:
+            return []
+
+        return [
+            {
+                "name": voice["ShortName"],
+                "lang": voice["Locale"],
+            }
+            for voice in voices
+            if voice.get("ShortName") and voice.get("Locale")
+        ]
+
+    def _send_narration_audio(self, body: dict[str, Any]):
+        text = " ".join(str(body.get("text") or "").split())
+        if not text or len(text) > 4_000:
+            self._send_json(
+                {"error": "Narration text must contain 1 to 4,000 characters."},
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        available_voices = self._list_narration_voices()
+        requested_voice = str(body.get("voiceName") or "")
+        voice_names = {voice["name"] for voice in available_voices}
+        voice_name = requested_voice if requested_voice in voice_names else "en-US-AvaMultilingualNeural"
+        if voice_name not in voice_names and available_voices:
+            voice_name = available_voices[0]["name"]
+
+        audio_file = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
+        audio_path = Path(audio_file.name)
+        audio_file.close()
+
+        try:
+            communicate = edge_tts.Communicate(text, voice_name)
+            asyncio.run(communicate.save(str(audio_path)))
+            data = audio_path.read_bytes()
+        except Exception:
+            self._send_json(
+                {"error": "Unable to create narration audio."},
+                status=HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+            return
+        finally:
+            audio_path.unlink(missing_ok=True)
+
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "audio/mpeg")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)

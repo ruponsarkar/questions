@@ -11,6 +11,11 @@ export default function App() {
     perPage: 5,
     timerSeconds: 15,
     recordVideo: false,
+    narrateVideo: true,
+    voiceName: "",
+    videoAudioMode: "both",
+    musicVolume: 0.25,
+    voiceVolume: 1,
   });
 
   const [quizState, setQuizState] = useState({
@@ -23,9 +28,16 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [recordingState, setRecordingState] = useState("idle");
+  const [speechVoices, setSpeechVoices] = useState([]);
+  const [isVoicePreviewPlaying, setIsVoicePreviewPlaying] = useState(false);
   const sessionRef = useRef(null);
   const remainingSecondsRef = useRef(0);
   const recordingRef = useRef(null);
+  const narrationAudioRef = useRef(null);
+  const narrationCacheRef = useRef(new Map());
+  const narrationPlaybackIdRef = useRef(0);
+  const revealingQuestionIdsRef = useRef(new Set());
+  const audioPreviewRef = useRef(null);
   const advanceAnimationStartedAtRef = useRef(0);
 
   useEffect(() => {
@@ -36,9 +48,282 @@ export default function App() {
     remainingSecondsRef.current = remainingSeconds;
   }, [remainingSeconds]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    fetch("/api/narration/voices")
+      .then((response) => response.json())
+      .then((data) => {
+        if (!isMounted) {
+          return;
+        }
+
+        const availableVoices = data.voices || [];
+        setSpeechVoices(availableVoices);
+      setForm((current) => {
+        if (current.voiceName || !availableVoices.length) {
+          return current;
+        }
+
+        return { ...current, voiceName: availableVoices[0].name };
+      });
+      })
+      .catch(() => {
+        if (isMounted) {
+          setSpeechVoices([]);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+      stopNarration();
+      stopAudioPreview();
+    };
+  }, []);
+
   function plainText(html) {
     const documentFragment = new DOMParser().parseFromString(html || "", "text/html");
     return documentFragment.body.textContent?.replace(/\s+/g, " ").trim() || "";
+  }
+
+  function spokenText(html) {
+    return plainText(html)
+      .replace(/[_]+|\.{2,}|[-–—]{2,}/g, " dash ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function questionNarrationText(question, questionNumber) {
+    const options = question.options
+      .map((option, index) => `Option ${index + 1}: ${spokenText(option.answerHtml)}.`)
+      .join(" ");
+    return `Question ${questionNumber}. ${spokenText(question.questionHtml)}. ${options}`;
+  }
+
+  function correctAnswerNarrationText(question) {
+    const correctOption = question.options.find((option) => option.isRight);
+    return correctOption
+      ? `The correct answer is: ${spokenText(correctOption.answerHtml)}.`
+      : "";
+  }
+
+  function getNarrationAudio(text, voiceName) {
+    const cacheKey = `${voiceName}\u0000${text}`;
+    const cachedAudio = narrationCacheRef.current.get(cacheKey);
+    if (cachedAudio) {
+      return cachedAudio;
+    }
+
+    const audioRequest = fetch("/api/narration", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, voiceName }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Unable to create narration audio.");
+        }
+        return response.blob();
+      })
+      .catch((error) => {
+        narrationCacheRef.current.delete(cacheKey);
+        throw error;
+      });
+
+    narrationCacheRef.current.set(cacheKey, audioRequest);
+    return audioRequest;
+  }
+
+  function prefetchNarration(text, voiceName) {
+    if (text) {
+      void getNarrationAudio(text, voiceName).catch(() => {});
+    }
+  }
+
+  function prefetchQuestionNarration(question, questionNumber, voiceName) {
+    prefetchNarration(questionNarrationText(question, questionNumber), voiceName);
+    prefetchNarration(correctAnswerNarrationText(question), voiceName);
+  }
+
+  function stopNarration() {
+    narrationPlaybackIdRef.current += 1;
+    const narration = narrationAudioRef.current;
+    if (!narration) {
+      return;
+    }
+
+    narration.audio.pause();
+    narration.source?.disconnect();
+    narration.gain?.disconnect();
+    URL.revokeObjectURL(narration.url);
+    narrationAudioRef.current = null;
+  }
+
+  function stopAudioPreview() {
+    const preview = audioPreviewRef.current;
+    if (!preview) {
+      return;
+    }
+
+    preview.backgroundMusic?.audio.pause();
+    preview.backgroundMusic?.source.disconnect();
+    preview.backgroundMusic?.gain.disconnect();
+    preview.audioContext.close();
+    audioPreviewRef.current = null;
+  }
+
+  async function playNarration(text, voiceName, recording) {
+    stopNarration();
+    const playbackId = narrationPlaybackIdRef.current;
+    const audioBlob = await getNarrationAudio(text, voiceName);
+    if (playbackId !== narrationPlaybackIdRef.current) {
+      return;
+    }
+
+    const url = URL.createObjectURL(audioBlob);
+    const audio = new Audio(url);
+    const narration = { audio, url, source: null, gain: null };
+    if (recording?.audioContext && recording?.audioDestination) {
+      narration.source = recording.audioContext.createMediaElementSource(audio);
+      narration.gain = recording.audioContext.createGain();
+      narration.gain.gain.value = recording.voiceVolume;
+      narration.source.connect(narration.gain).connect(recording.audioDestination);
+    }
+
+    narrationAudioRef.current = narration;
+    await new Promise((resolve, reject) => {
+      let completed = false;
+      let completionTimeout;
+      const finish = () => {
+        if (completed) {
+          return;
+        }
+        completed = true;
+        window.clearTimeout(completionTimeout);
+        if (playbackId !== narrationPlaybackIdRef.current) {
+          return;
+        }
+        if (narrationAudioRef.current === narration) {
+          narrationAudioRef.current = null;
+        }
+        narration.source?.disconnect();
+        narration.gain?.disconnect();
+        URL.revokeObjectURL(url);
+        resolve();
+      };
+      completionTimeout = window.setTimeout(finish, 30_000);
+      audio.onended = finish;
+      audio.onloadedmetadata = () => {
+        if (Number.isFinite(audio.duration)) {
+          window.clearTimeout(completionTimeout);
+          completionTimeout = window.setTimeout(
+            finish,
+            Math.ceil(audio.duration * 1000) + 1_500,
+          );
+        }
+      };
+      audio.onerror = () => {
+        window.clearTimeout(completionTimeout);
+        stopNarration();
+        reject(new Error("Narration audio could not play."));
+      };
+      audio.play().catch((error) => {
+        stopNarration();
+        reject(error);
+      });
+    });
+  }
+
+  async function narrateQuestion(question, questionNumber, voiceName, recording, onFinish) {
+    const activeSession = sessionRef.current;
+    const nextQuestion = activeSession?.questions[activeSession.activeQuestionIndex + 1];
+    prefetchNarration(correctAnswerNarrationText(question), voiceName);
+    if (nextQuestion) {
+      prefetchQuestionNarration(nextQuestion, questionNumber + 1, voiceName);
+    }
+    try {
+      await playNarration(
+        questionNarrationText(question, questionNumber),
+        voiceName,
+        recording,
+      );
+    } catch {
+      // Continue the quiz when local audio generation is unavailable.
+    }
+    onFinish?.();
+  }
+
+  async function narrateCorrectAnswer(question, voiceName, recording, onFinish) {
+    const answerText = correctAnswerNarrationText(question);
+    if (answerText) {
+      try {
+        await playNarration(
+          answerText,
+          voiceName,
+          recording,
+        );
+      } catch {
+        // Continue the quiz when local audio generation is unavailable.
+      }
+    }
+    onFinish?.();
+  }
+
+  async function previewSelectedVoice() {
+    const includeMusic = form.videoAudioMode !== "voice";
+    const includeVoice =
+      form.videoAudioMode !== "music" && form.narrateVideo && speechVoices.length > 0;
+    if (!includeMusic && !includeVoice) {
+      return;
+    }
+
+    setIsVoicePreviewPlaying(true);
+    stopNarration();
+    stopAudioPreview();
+
+    const audioContext = new AudioContext();
+    const preview = {
+      audioContext,
+      audioDestination: audioContext.destination,
+      backgroundMusic: null,
+      voiceVolume: Number(form.voiceVolume),
+    };
+    audioPreviewRef.current = preview;
+
+    try {
+      await audioContext.resume();
+      if (includeMusic) {
+        const response = await fetch("/api/music");
+        const { tracks = [] } = await response.json();
+        const selectedTrack = tracks[Math.floor(Math.random() * tracks.length)];
+        if (selectedTrack?.url) {
+          const audio = new Audio(selectedTrack.url);
+          const source = audioContext.createMediaElementSource(audio);
+          const gain = audioContext.createGain();
+          gain.gain.value = Number(form.musicVolume);
+          source.connect(gain).connect(audioContext.destination);
+          audio.loop = true;
+          preview.backgroundMusic = { audio, gain, source };
+          await audio.play();
+        }
+      }
+
+      if (includeVoice) {
+        await playNarration(
+          "This is a live preview of the selected video audio. The voice will remain clear over the background music.",
+          form.voiceName,
+          preview,
+        );
+      } else {
+        await new Promise((resolve) => window.setTimeout(resolve, 5_000));
+      }
+    } catch {
+    } finally {
+      if (audioPreviewRef.current === preview) {
+        stopAudioPreview();
+      }
+      setIsVoicePreviewPlaying(false);
+    }
   }
 
   // Keep each subject visually recognizable in exported videos. The subject id
@@ -356,15 +641,21 @@ export default function App() {
     }
 
     recording.stopping = true;
+    stopNarration();
     recording.download = download;
     window.clearInterval(recording.frameInterval);
     if (recording.backgroundMusic) {
-      const { audio, audioContext, destination, source } = recording.backgroundMusic;
+      const { audio, gain, source } = recording.backgroundMusic;
       audio.pause();
       audio.currentTime = 0;
       source.disconnect();
-      destination.stream.getTracks().forEach((track) => track.stop());
-      audioContext.close();
+      gain.disconnect();
+    }
+    if (recording.audioDestination) {
+      recording.audioDestination.stream.getTracks().forEach((track) => track.stop());
+    }
+    if (recording.audioContext) {
+      recording.audioContext.close();
     }
     recording.recorders.forEach(({ recorder }) => {
       if (recorder.state !== "inactive") {
@@ -386,23 +677,35 @@ export default function App() {
 
     stopQuestionRecording({ download: true, updateState: false });
 
+    const activeSession = sessionRef.current;
+    const includeMusic = activeSession?.videoAudioMode !== "voice";
+    const includeVoice = activeSession?.narrateVideo;
+    let audioContext = null;
+    let audioDestination = null;
     let backgroundMusic = null;
     try {
-      const response = await fetch("/api/music");
-      const { tracks = [] } = await response.json();
-      const selectedTrack = tracks[Math.floor(Math.random() * tracks.length)];
-
-      if (selectedTrack?.url && window.AudioContext) {
-        const audio = new Audio(selectedTrack.url);
-        const audioContext = new AudioContext();
-        const destination = audioContext.createMediaStreamDestination();
-        const source = audioContext.createMediaElementSource(audio);
-        source.connect(destination);
-        audio.loop = true;
-        audio.preload = "auto";
+      if ((includeMusic || includeVoice) && window.AudioContext) {
+        audioContext = new AudioContext();
+        audioDestination = audioContext.createMediaStreamDestination();
         await audioContext.resume();
-        await audio.play();
-        backgroundMusic = { audio, audioContext, destination, source };
+      }
+
+      if (includeMusic && audioContext && audioDestination) {
+        const response = await fetch("/api/music");
+        const { tracks = [] } = await response.json();
+        const selectedTrack = tracks[Math.floor(Math.random() * tracks.length)];
+
+        if (selectedTrack?.url) {
+          const audio = new Audio(selectedTrack.url);
+          const source = audioContext.createMediaElementSource(audio);
+          const gain = audioContext.createGain();
+          gain.gain.value = activeSession?.musicVolume ?? 0.25;
+          source.connect(gain).connect(audioDestination);
+          audio.loop = true;
+          audio.preload = "auto";
+          await audio.play();
+          backgroundMusic = { audio, gain, source };
+        }
       }
     } catch {
       // Music is optional: still create the quiz video if a file cannot play.
@@ -421,6 +724,9 @@ export default function App() {
       stopping: false,
       download: true,
       backgroundMusic,
+      audioContext,
+      audioDestination,
+      voiceVolume: activeSession?.voiceVolume ?? 1,
     };
 
     formats.forEach((format) => {
@@ -429,7 +735,7 @@ export default function App() {
       canvas.height = format.height;
       const chunks = [];
       const recordingStream = canvas.captureStream(30);
-      backgroundMusic?.destination.stream.getAudioTracks().forEach((track) => {
+      audioDestination?.stream.getAudioTracks().forEach((track) => {
         recordingStream.addTrack(track);
       });
       const recorder = new MediaRecorder(
@@ -482,6 +788,7 @@ export default function App() {
     recording.frameInterval = window.setInterval(renderFrames, 1000 / 30);
     recordingRef.current = recording;
     setRecordingState("recording");
+
   }
 
   useEffect(() => {
@@ -560,6 +867,51 @@ export default function App() {
 
     return session.questions[session.activeQuestionIndex] || null;
   }, [session]);
+
+  useEffect(() => {
+    if (
+      !session?.narrateVideo ||
+      !recordingRef.current ||
+      !currentQuestion ||
+      session.completed ||
+      session.pendingAdvance ||
+      session.advancingQuestionId ||
+      session.narrationStatus !== "waiting"
+    ) {
+      return;
+    }
+
+    narrateQuestion(
+      currentQuestion,
+      session.activeQuestionIndex + 1,
+      session.voiceName,
+      recordingRef.current,
+      () => {
+        setSession((current) => {
+          if (
+            !current ||
+            current.completed ||
+            current.activeQuestionIndex !== session.activeQuestionIndex ||
+            current.narrationStatus !== "waiting"
+          ) {
+            return current;
+          }
+
+          return { ...current, narrationStatus: "ready" };
+        });
+      },
+    );
+  }, [
+    currentQuestion?.id,
+    session?.activeQuestionIndex,
+    session?.advancingQuestionId,
+    session?.completed,
+    session?.narrateVideo,
+    session?.narrationStatus,
+    session?.pendingAdvance,
+    session?.voiceName,
+    recordingState,
+  ]);
 
   /*
    * ============================================================
@@ -670,6 +1022,10 @@ export default function App() {
       return;
     }
 
+    if (session.narrationStatus !== "ready") {
+      return;
+    }
+
     /*
      * Start timer for the current question.
      */
@@ -697,6 +1053,7 @@ export default function App() {
     session?.timerSeconds,
     session?.completed,
     session?.pendingAdvance,
+    session?.narrationStatus,
     session?.revealedQuestionIds,
   ]);
 
@@ -772,6 +1129,7 @@ export default function App() {
           activeQuestionIndex: current.activeQuestionIndex + 1,
           pendingAdvance: false,
           advancingQuestionId: null,
+          narrationStatus: current.narrateVideo ? "waiting" : "ready",
         };
       });
 
@@ -804,6 +1162,9 @@ export default function App() {
    */
   function startQuiz(event) {
     event.preventDefault();
+    setIsVoicePreviewPlaying(false);
+    stopNarration();
+    stopAudioPreview();
 
     setQuizState({
       loading: true,
@@ -858,6 +1219,23 @@ export default function App() {
 
           timerSeconds: Number(form.timerSeconds),
 
+          narrateVideo:
+            form.recordVideo &&
+            form.videoAudioMode !== "music" &&
+            form.narrateVideo &&
+            speechVoices.length > 0,
+          voiceName: form.voiceName,
+          videoAudioMode: form.videoAudioMode,
+          musicVolume: Number(form.musicVolume),
+          voiceVolume: Number(form.voiceVolume),
+          narrationStatus:
+            form.recordVideo &&
+            form.videoAudioMode !== "music" &&
+            form.narrateVideo &&
+            speechVoices.length > 0
+              ? "waiting"
+              : "ready",
+
           activeQuestionIndex: 0,
 
           selectedAnswers: {},
@@ -886,11 +1264,18 @@ export default function App() {
           showAllQuestions: false,
         };
 
+        narrationCacheRef.current.clear();
+        revealingQuestionIdsRef.current.clear();
+        if (newSession.narrateVideo) {
+          prefetchQuestionNarration(newSession.questions[0], 1, newSession.voiceName);
+        }
         sessionRef.current = newSession;
-        remainingSecondsRef.current = Number(form.timerSeconds);
+        remainingSecondsRef.current = newSession.narrationStatus === "ready"
+          ? Number(form.timerSeconds)
+          : 0;
         setSession(newSession);
 
-        setRemainingSeconds(Number(form.timerSeconds));
+        setRemainingSeconds(remainingSecondsRef.current);
         if (form.recordVideo) {
           void startQuestionRecording({
             subjectName: selectedSubject?.subName,
@@ -980,35 +1365,46 @@ export default function App() {
    * ============================================================
    */
   function revealCurrentQuestion() {
-    setSession((current) => {
-      if (!current) {
-        return current;
-      }
+    const activeSession = sessionRef.current;
+    const question = activeSession?.questions[activeSession.activeQuestionIndex];
+    if (!activeSession || !question || activeSession.revealedQuestionIds.includes(question.id)) {
+      return;
+    }
+    if (revealingQuestionIdsRef.current.has(question.id)) {
+      return;
+    }
+    revealingQuestionIdsRef.current.add(question.id);
 
-      const question = current.questions[current.activeQuestionIndex];
+    const shouldNarrateAnswer = activeSession.narrateVideo && recordingRef.current;
+    const revealedSession = {
+      ...activeSession,
+      revealedQuestionIds: [...activeSession.revealedQuestionIds, question.id],
+      pendingAdvance: !shouldNarrateAnswer,
+      narrationStatus: shouldNarrateAnswer ? "answer" : activeSession.narrationStatus,
+    };
+    sessionRef.current = revealedSession;
+    setSession(revealedSession);
 
-      if (!question) {
-        return current;
-      }
-
-      /*
-       * Already revealed.
-       */
-      if (current.revealedQuestionIds.includes(question.id)) {
-        return current;
-      }
-
-      return {
-        ...current,
-
-        revealedQuestionIds: [...current.revealedQuestionIds, question.id],
-
-        /*
-         * Start 2 second delay.
-         */
-        pendingAdvance: true,
-      };
-    });
+    if (shouldNarrateAnswer) {
+      void narrateCorrectAnswer(
+        question,
+        activeSession.voiceName,
+        recordingRef.current,
+        () => {
+          const current = sessionRef.current;
+          if (!current || !current.revealedQuestionIds.includes(question.id)) {
+            return;
+          }
+          const answerCompleteSession = {
+            ...current,
+            narrationStatus: "ready",
+            pendingAdvance: true,
+          };
+          sessionRef.current = answerCompleteSession;
+          setSession(answerCompleteSession);
+        },
+      );
+    }
   }
 
   /*
@@ -1040,6 +1436,8 @@ export default function App() {
    */
   function resetQuiz() {
     stopQuestionRecording();
+    narrationCacheRef.current.clear();
+    revealingQuestionIdsRef.current.clear();
     setSession(null);
     setRemainingSeconds(0);
   }
@@ -1256,6 +1654,25 @@ export default function App() {
           line-height: 1.35;
         }
 
+        .voice-selection {
+          display: grid;
+          gap: 10px;
+          padding: 14px;
+          border: 1px solid rgba(93, 159, 61, 0.2);
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.64);
+        }
+
+        .voice-selection label {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .voice-selection select {
+          width: 100%;
+        }
+
         .recording-button span {
           width: 9px;
           height: 9px;
@@ -1349,9 +1766,9 @@ export default function App() {
         <div>
           <p className="eyebrow">Top Questions</p>
 
-          <h1>
+          {/* <h1>
             Pick a subject, tune the timer, and run a focused practice session.
-          </h1>
+          </h1> */}
 
           <p className="hero-copy">
             Lightweight by design: fast setup, clean cards, and sequential timer
@@ -1487,6 +1904,102 @@ export default function App() {
             </span>
           </label>
 
+          {form.recordVideo ? (
+            <div className="voice-selection">
+              <label>
+                <input
+                  type="checkbox"
+                  name="narrateVideo"
+                  checked={form.narrateVideo}
+                  onChange={updateField}
+                  disabled={!speechVoices.length || form.videoAudioMode === "music"}
+                />
+                <span>Read questions, options, and correct answers aloud</span>
+              </label>
+
+              <label>
+                <span>Voice</span>
+                <select
+                  name="voiceName"
+                  value={form.voiceName}
+                  onChange={updateField}
+                  disabled={
+                    !form.narrateVideo ||
+                    !speechVoices.length ||
+                    form.videoAudioMode === "music"
+                  }
+                >
+                  {!speechVoices.length ? (
+                    <option value="">No local voices available</option>
+                  ) : (
+                    speechVoices.map((voice) => (
+                      <option key={`${voice.name}-${voice.lang}`} value={voice.name}>
+                        {voice.name} ({voice.lang})
+                      </option>
+                    ))
+                  )}
+                </select>
+              </label>
+
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={previewSelectedVoice}
+                disabled={
+                  isVoicePreviewPlaying ||
+                  (form.videoAudioMode !== "music" &&
+                    (!form.narrateVideo || !speechVoices.length))
+                }
+              >
+                {isVoicePreviewPlaying ? "Playing live preview..." : "Preview live audio"}
+              </button>
+
+              <label>
+                <span>Video audio</span>
+                <select name="videoAudioMode" value={form.videoAudioMode} onChange={updateField}>
+                  <option value="both">Voice and background music</option>
+                  <option value="voice">Voice only</option>
+                  <option value="music">Background music only</option>
+                </select>
+              </label>
+
+              {form.videoAudioMode !== "voice" ? (
+                <label>
+                  <span>Music volume: {Math.round(Number(form.musicVolume) * 100)}%</span>
+                  <input
+                    type="range"
+                    name="musicVolume"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={form.musicVolume}
+                    onChange={updateField}
+                  />
+                </label>
+              ) : null}
+
+              {form.videoAudioMode !== "music" ? (
+                <label>
+                  <span>Voice volume: {Math.round(Number(form.voiceVolume) * 100)}%</span>
+                  <input
+                    type="range"
+                    name="voiceVolume"
+                    min="0.5"
+                    max="1"
+                    step="0.05"
+                    value={form.voiceVolume}
+                    onChange={updateField}
+                  />
+                </label>
+              ) : null}
+
+              <small>
+                Voice audio is embedded in the saved video. When both are selected, music
+                starts low so the voice stays clear.
+              </small>
+            </div>
+          ) : null}
+
           {/* Start button */}
           <button
             className="primary-button"
@@ -1561,6 +2074,10 @@ export default function App() {
                       ? "Done"
                       : session.pendingAdvance
                         ? "Answer shown"
+                        : session.narrationStatus === "answer"
+                          ? "Reading correct answer"
+                        : session.narrationStatus === "waiting"
+                          ? "Reading question"
                         : `${remainingSeconds}s`}
                   </strong>
                 </div>
@@ -1649,7 +2166,11 @@ export default function App() {
                               <TimerClock
                                 remaining={remainingSeconds}
                                 total={session.timerSeconds}
-                                isActive={isActive && !session.pendingAdvance}
+                                isActive={
+                                  isActive &&
+                                  !session.pendingAdvance &&
+                                  session.narrationStatus === "ready"
+                                }
                               />
                             </div>
                           ) : isRevealed ? (

@@ -120,3 +120,13 @@ The server uses the same `.env` database settings as the fetch scripts, so it ca
 Video background music
 
 To include background music in recorded quiz videos, add audio files to `web/music/` and restart the server. Supported formats are `.mp3`, `.wav`, `.m4a`, `.aac`, `.ogg`, and `.webm`. Each recording randomly selects one track, loops it when it is shorter than the quiz, and stops it with the video when the quiz ends.
+
+Recorded voice narration
+
+The video recorder can embed natural-sounding Microsoft Edge neural voices using the free `edge-tts` Python package. Internet access is required when generating narration. Install dependencies, restart the Python server, then enable **Record quiz videos**, choose a voice, test it, and select one of these video audio modes:
+
+- Voice and background music
+- Voice only
+- Background music only
+
+When voice and music are both selected, the default music level is low so the spoken question, options, and correct answer stay clear. The timer begins only after the question narration finishes.
