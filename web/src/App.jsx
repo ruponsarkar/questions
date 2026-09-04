@@ -789,6 +789,32 @@ export default function App() {
     recordingRef.current = recording;
     setRecordingState("recording");
 
+    if (activeSession?.narrateVideo && activeSession.questions[0]) {
+      const narrationSession = { ...activeSession, narrationStatus: "playing" };
+      sessionRef.current = narrationSession;
+      setSession(narrationSession);
+      void narrateQuestion(
+        narrationSession.questions[0],
+        1,
+        narrationSession.voiceName,
+        recording,
+        () => {
+          const current = sessionRef.current;
+          if (
+            !current ||
+            current.completed ||
+            current.activeQuestionIndex !== 0 ||
+            current.narrationStatus !== "playing"
+          ) {
+            return;
+          }
+
+          const readySession = { ...current, narrationStatus: "ready" };
+          sessionRef.current = readySession;
+          setSession(readySession);
+        },
+      );
+    }
   }
 
   useEffect(() => {
@@ -1185,7 +1211,7 @@ export default function App() {
       }),
     })
       .then((res) => res.json())
-      .then((data) => {
+      .then(async (data) => {
         if (data.error) {
           throw new Error(data.error);
         }
@@ -1193,13 +1219,6 @@ export default function App() {
         if (!data.questions?.length) {
           throw new Error("No questions found for this selection.");
         }
-
-        setQuizState({
-          loading: false,
-          error: "",
-          availableCount: data.availableCount,
-          questions: data.questions,
-        });
 
         const selectedSubject = subjects.find(
           (subject) => subject.id === Number(form.subjectId),
@@ -1267,8 +1286,23 @@ export default function App() {
         narrationCacheRef.current.clear();
         revealingQuestionIdsRef.current.clear();
         if (newSession.narrateVideo) {
+          try {
+            await getNarrationAudio(
+              questionNarrationText(newSession.questions[0], 1),
+              newSession.voiceName,
+            );
+          } catch {
+            // Start the quiz without a cached first narration if Edge TTS is unavailable.
+          }
           prefetchQuestionNarration(newSession.questions[0], 1, newSession.voiceName);
         }
+
+        setQuizState({
+          loading: false,
+          error: "",
+          availableCount: data.availableCount,
+          questions: data.questions,
+        });
         sessionRef.current = newSession;
         remainingSecondsRef.current = newSession.narrationStatus === "ready"
           ? Number(form.timerSeconds)
