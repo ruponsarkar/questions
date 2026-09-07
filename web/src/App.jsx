@@ -13,9 +13,9 @@ export default function App() {
   const [form, setForm] = useState({
     subjectId: "",
     syllabusId: "",
-    questionCount: 10,
+    questionCount: 5,
     perPage: 5,
-    timerSeconds: 15,
+    timerSeconds: 5,
     recordVideo: false,
     narrateVideo: true,
     voiceName: "en-IN-PrabhatNeural",
