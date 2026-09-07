@@ -13,12 +13,12 @@ export default function App() {
   const [form, setForm] = useState({
     subjectId: "",
     syllabusId: "",
-    questionCount: 10,
+    questionCount: 5,
     perPage: 5,
-    timerSeconds: 15,
+    timerSeconds: 5,
     recordVideo: false,
     narrateVideo: true,
-    voiceName: "",
+    voiceName: "en-IN-PrabhatNeural",
     videoAudioMode: "both",
     musicVolume: 0.25,
     voiceVolume: 1,
@@ -67,14 +67,21 @@ export default function App() {
           return;
         }
 
-        const availableVoices = data.voices || [];
-        setSpeechVoices(availableVoices);
+      const availableVoices = data.voices || [];
+      setSpeechVoices(availableVoices);
       setForm((current) => {
-        if (current.voiceName || !availableVoices.length) {
+        if (!availableVoices.length) {
           return current;
         }
 
-        return { ...current, voiceName: availableVoices[0].name };
+        if (availableVoices.some((voice) => voice.name === current.voiceName)) {
+          return current;
+        }
+
+        const preferredVoice = availableVoices.find(
+          (voice) => voice.name === "en-IN-PrabhatNeural",
+        );
+        return { ...current, voiceName: preferredVoice?.name || availableVoices[0].name };
       });
       })
       .catch(() => {
@@ -405,8 +412,10 @@ export default function App() {
     const isPortrait = aspect === "portrait";
     const width = canvas.width;
     const height = canvas.height;
-    const padding = isPortrait ? 40 : 56;
-    const contentWidth = width - padding * 2;
+    const horizontalPadding = isPortrait ? 40 : 56;
+    const portraitInfoHeight = isPortrait ? 270 : 0;
+    const headingTop = isPortrait ? 42 : horizontalPadding;
+    const contentWidth = width - horizontalPadding * 2;
     const activeSession = sessionRef.current;
 
     context.clearRect(0, 0, width, height);
@@ -419,29 +428,61 @@ export default function App() {
 
     context.fillStyle = theme.accent;
     context.font = `700 ${isPortrait ? 22 : 24}px Manrope, sans-serif`;
-    const videoHeading = activeSession?.videoTitle
+    const videoHeading = isPortrait
+      ? "TOP QUESTIONS"
+      : activeSession?.videoTitle
       ? `TOP QUESTIONS (${activeSession.videoTitle})`
       : "TOP QUESTIONS";
     const headingLineHeight = isPortrait ? 22 : 24;
-    const headingLines = getWrappedLines(context, videoHeading, width - padding * 2);
+    const headingLines = getWrappedLines(context, videoHeading, width - horizontalPadding * 2);
     headingLines.forEach((line, index) =>
-      context.fillText(line, padding, padding + index * headingLineHeight),
+      context.fillText(line, horizontalPadding, headingTop + index * headingLineHeight),
     );
 
     if (!activeSession || activeSession.completed) {
       context.fillStyle = "#1f2a17";
       context.font = `800 ${isPortrait ? 52 : 64}px Manrope, sans-serif`;
-      context.fillText("Session complete", padding, height / 2);
+      context.fillText("Session complete", horizontalPadding, height / 2);
       return;
     }
 
-    const listTop =
-      padding + headingLines.length * headingLineHeight + (isPortrait ? 24 : 16);
+    if (isPortrait) {
+      const infoX = horizontalPadding;
+      const infoWidth = contentWidth;
+      context.fillStyle = "rgba(255, 255, 255, 0.46)";
+      context.beginPath();
+      context.roundRect(infoX, 82, infoWidth, 154, 24);
+      context.fill();
+      context.fillStyle = "#1f2a17";
+      context.font = "800 23px Manrope, sans-serif";
+      drawWrappedText(
+        context,
+        `Subject: ${activeSession.subjectName || "Top Questions"}`,
+        infoX + 26,
+        122,
+        infoWidth - 52,
+        28,
+      );
+      context.font = "700 20px Manrope, sans-serif";
+      drawWrappedText(
+        context,
+        `Syllabus: ${activeSession.syllabusName || "General"}`,
+        infoX + 26,
+        177,
+        infoWidth - 52,
+        25,
+      );
+      context.fillStyle = theme.accent;
+      context.font = "800 19px Manrope, sans-serif";
+      context.fillText(`Questions: ${activeSession.questions.length}`, infoX + 26, 218);
+    }
+
+    const listTop = isPortrait
+      ? portraitInfoHeight + 28
+      : headingTop + headingLines.length * headingLineHeight + 16;
     const cardGap = isPortrait ? 20 : 16;
     const questions = activeSession.questions.slice(
       activeSession.activeQuestionIndex,
-      // Use the remaining portrait space to preview another upcoming question.
-      // The canvas naturally crops the final card at the bottom of the frame.
       activeSession.activeQuestionIndex + (isPortrait ? 4 : 2),
     );
     const isAdvancing = Boolean(activeSession.advancingQuestionId);
@@ -449,15 +490,15 @@ export default function App() {
       ? Math.min(1, (performance.now() - advanceAnimationStartedAtRef.current) / 480)
       : 0;
     // Reserve room for a three-line question at the recording font size.
-    const activeCardHeight = isPortrait ? 900 : 900;
+    const activeCardHeight = 900;
     const waitingCardHeight = isPortrait ? 540 : 510;
 
     const drawTimerBadge = (cardTop) => {
       const badgeWidth = isPortrait ? 280 : 270;
       const badgeHeight = isPortrait ? 112 : 106;
-      const badgeX = width - padding - badgeWidth - 18;
+      const badgeX = width - horizontalPadding - badgeWidth - 18;
       // Center the badge on the card edge so half sits outside the card.
-      const badgeY = cardTop - badgeHeight / 2;
+      const badgeY = isPortrait ? cardTop - 24 : cardTop - badgeHeight / 2;
       const badgeCenterX = badgeX + badgeWidth / 2;
       const badgeCenterY = badgeY + badgeHeight / 2;
       const zoom = 1 + Math.sin(performance.now() / 380) * 0.035;
@@ -517,13 +558,13 @@ export default function App() {
       const isCompact = !isActive;
       const revealed = activeSession.revealedQuestionIds.includes(question.id);
       const cardPadding = isPortrait ? 32 : 36;
-      const textX = padding + cardPadding;
+      const textX = horizontalPadding + cardPadding;
       const innerWidth = contentWidth - cardPadding * 2;
 
       context.save();
       context.globalAlpha = opacity;
       context.beginPath();
-      context.roundRect(padding, top, contentWidth, cardHeight, 24);
+      context.roundRect(horizontalPadding, top, contentWidth, cardHeight, 24);
       context.clip();
       context.fillStyle = isActive ? theme.card : "rgba(255, 255, 255, 0.82)";
       context.fill();
@@ -540,13 +581,13 @@ export default function App() {
           context.fillStyle = "#16733d";
           context.font = `700 ${isPortrait ? 18 : 17}px Manrope, sans-serif`;
           context.textAlign = "right";
-          context.fillText("ANSWER SHOWN", width - padding - cardPadding, top + 40);
+          context.fillText("ANSWER SHOWN", width - horizontalPadding - cardPadding, top + 40);
           context.textAlign = "left";
         } else {
           context.fillStyle = "#60705a";
           context.font = `700 ${isPortrait ? 18 : 17}px Manrope, sans-serif`;
           context.textAlign = "right";
-          context.fillText("WAITING", width - padding - cardPadding, top + 40);
+          context.fillText("WAITING", width - horizontalPadding - cardPadding, top + 40);
           context.textAlign = "left";
         }
       }
@@ -1466,6 +1507,8 @@ export default function App() {
           videoTitle: [selectedSubject?.subName, selectedSyllabus?.syllabus]
             .filter(Boolean)
             .join(" - "),
+          subjectName: selectedSubject?.subName || "Top Questions",
+          syllabusName: selectedSyllabus?.syllabus || "General",
 
           perPage: Number(form.perPage),
 
