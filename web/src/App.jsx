@@ -725,6 +725,18 @@ export default function App() {
       return;
     }
 
+    // MediaRecorder does not transcode WebM to MP4. Request an MP4 encoder up
+    // front, and do not label a WebM recording as an MP4 when one is absent.
+    const mimeType = [
+      "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+      "video/mp4;codecs=avc1.4D401F,mp4a.40.2",
+      "video/mp4",
+    ].find((type) => MediaRecorder.isTypeSupported(type));
+    if (!mimeType) {
+      setRecordingState("unsupported");
+      return;
+    }
+
     stopQuestionRecording({ download: true, updateState: false });
 
     const activeSession = sessionRef.current;
@@ -765,9 +777,6 @@ export default function App() {
       { ratio: "16x9", aspect: "landscape", width: 1920, height: 1080 },
       { ratio: "9x16", aspect: "portrait", width: 1080, height: 1920 },
     ];
-    const mimeType = ["video/webm;codecs=vp9", "video/webm", "video/mp4"].find(
-      (type) => MediaRecorder.isTypeSupported(type),
-    );
     const recording = {
       recorders: [],
       frameInterval: null,
@@ -807,7 +816,7 @@ export default function App() {
           return;
         }
 
-        const video = new Blob(chunks, { type: mimeType || "video/webm" });
+        const video = new Blob(chunks, { type: mimeType });
         const downloadLink = document.createElement("a");
         downloadLink.href = URL.createObjectURL(video);
         const safeNamePart = (value) =>
@@ -817,9 +826,7 @@ export default function App() {
             .trim();
         downloadLink.download = `${safeNamePart(subjectName)} ${safeNamePart(
           syllabusName,
-        )} ${format.ratio}.${
-          mimeType?.includes("mp4") ? "mp4" : "webm"
-        }`;
+        )} ${format.ratio}.mp4`;
         downloadLink.click();
         window.setTimeout(() => URL.revokeObjectURL(downloadLink.href), 1000);
       };
