@@ -1412,6 +1412,156 @@ export default function App() {
     return canvas;
   }
 
+  function drawFacebookAnswerImage(question, subject, imageFormat) {
+    const canvas = document.createElement("canvas");
+    canvas.width = imageFormat.width;
+    canvas.height = imageFormat.height;
+    const context = canvas.getContext("2d");
+    const isPortrait = canvas.height > canvas.width;
+    const correctAnswer = question.options.find((option) => option.isRight);
+    const answerText = correctAnswer ? plainText(correctAnswer.answerHtml) : "Correct answer unavailable";
+    const descriptionText = plainText(question.descriptionHtml);
+    const questionText = plainText(question.questionHtml);
+    const hue = Math.floor(Math.random() * 360);
+    const padding = isPortrait ? 46 : 56;
+    const cardX = padding;
+    const cardY = isPortrait ? 118 : 62;
+    const cardWidth = canvas.width - padding * 2;
+    const cardHeight = canvas.height - cardY - (isPortrait ? 58 : 48);
+
+    const background = context.createLinearGradient(0, 0, canvas.width, canvas.height);
+    background.addColorStop(0, `hsl(${hue} 67% 20%)`);
+    background.addColorStop(0.55, `hsl(${(hue + 36) % 360} 67% 31%)`);
+    background.addColorStop(1, `hsl(${(hue + 78) % 360} 65% 20%)`);
+    context.fillStyle = background;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    context.fillStyle = "rgba(255, 255, 255, 0.08)";
+    context.beginPath();
+    context.arc(canvas.width - 38, 28, isPortrait ? 190 : 125, 0, Math.PI * 2);
+    context.fill();
+    context.beginPath();
+    context.arc(36, canvas.height - 14, isPortrait ? 165 : 110, 0, Math.PI * 2);
+    context.fill();
+
+    context.shadowColor = "rgba(0, 0, 0, 0.25)";
+    context.shadowBlur = 30;
+    context.shadowOffsetY = 14;
+    context.fillStyle = "rgba(255, 255, 255, 0.96)";
+    context.beginPath();
+    context.roundRect(cardX, cardY, cardWidth, cardHeight, 34);
+    context.fill();
+    context.shadowColor = "transparent";
+
+    context.fillStyle = `hsl(${(hue + 84) % 360} 76% 43%)`;
+    context.beginPath();
+    context.roundRect(cardX + 34, cardY + 30, isPortrait ? 228 : 212, 44, 22);
+    context.fill();
+    context.fillStyle = "#ffffff";
+    context.font = "800 18px Manrope, sans-serif";
+    context.textAlign = "center";
+    context.fillText("✓  ANSWER REVEAL", cardX + (isPortrait ? 148 : 140), cardY + 59);
+    context.textAlign = "left";
+
+    context.fillStyle = "#61706b";
+    context.font = "700 17px Manrope, sans-serif";
+    context.textAlign = "right";
+    context.fillText(subject?.subName || "QUICK QUIZ", cardX + cardWidth - 38, cardY + 58);
+    context.textAlign = "left";
+
+    const innerX = cardX + 42;
+    const innerWidth = cardWidth - 84;
+    const answerTop = cardY + 128;
+    context.fillStyle = "#65716d";
+    context.font = `800 ${isPortrait ? 18 : 16}px Manrope, sans-serif`;
+    context.fillText("THE CORRECT ANSWER", innerX, answerTop);
+
+    let answerFontSize = isPortrait ? 51 : 42;
+    let answerLines = [];
+    const maxAnswerHeight = descriptionText
+      ? (isPortrait ? 238 : 150)
+      : Number.POSITIVE_INFINITY;
+    do {
+      context.font = `800 ${answerFontSize}px Manrope, sans-serif`;
+      answerLines = getWrappedLines(context, answerText, innerWidth - 52);
+      const answerHeight = answerLines.length * answerFontSize * 1.14 + 54;
+      if (
+        (answerLines.length <= (isPortrait ? 3 : 2) && answerHeight <= maxAnswerHeight) ||
+        answerFontSize <= 16
+      ) {
+        break;
+      }
+      answerFontSize -= 2;
+    } while (true);
+
+    const answerLineHeight = answerFontSize * 1.14;
+    const answerBoxY = answerTop + 28;
+    const answerBoxHeight = Math.max(isPortrait ? 132 : 108, answerLines.length * answerLineHeight + 54);
+    context.fillStyle = `hsl(${(hue + 84) % 360} 74% 94%)`;
+    context.beginPath();
+    context.roundRect(innerX, answerBoxY, innerWidth, answerBoxHeight, 22);
+    context.fill();
+    context.fillStyle = `hsl(${(hue + 84) % 360} 69% 30%)`;
+    context.beginPath();
+    context.roundRect(innerX, answerBoxY, 12, answerBoxHeight, 6);
+    context.fill();
+    context.fillStyle = "#17251f";
+    context.font = `800 ${answerFontSize}px Manrope, sans-serif`;
+    const answerTextY = answerBoxY + answerBoxHeight / 2 - ((answerLines.length - 1) * answerLineHeight) / 2 + answerFontSize * 0.36;
+    answerLines.forEach((line, index) => {
+      context.fillText(line, innerX + 32, answerTextY + index * answerLineHeight);
+    });
+
+    const remainingHeight = cardY + cardHeight - (answerBoxY + answerBoxHeight) - 48;
+    const supportingText = descriptionText || questionText;
+    const supportingLabel = descriptionText ? "WHY THIS IS THE ANSWER" : "QUESTION";
+    if (supportingText && remainingHeight > 65) {
+      const supportTop = answerBoxY + answerBoxHeight + 44;
+      context.fillStyle = "#65716d";
+      context.font = `800 ${isPortrait ? 18 : 16}px Manrope, sans-serif`;
+      context.fillText(supportingLabel, innerX, supportTop);
+
+      let supportFontSize = isPortrait ? 28 : 24;
+      let supportLines = [];
+      const maxSupportLines = Math.max(2, Math.floor((remainingHeight - 30) / (supportFontSize * 1.35)));
+      do {
+        context.font = `600 ${supportFontSize}px Manrope, sans-serif`;
+        supportLines = getWrappedLines(context, supportingText, innerWidth);
+        if (supportLines.length <= maxSupportLines || supportFontSize <= 17) {
+          break;
+        }
+        supportFontSize -= 1;
+      } while (true);
+      const supportLineHeight = supportFontSize * 1.35;
+      const availableLines = Math.max(1, Math.floor((remainingHeight - 30) / supportLineHeight));
+      context.fillStyle = "#31423b";
+      context.font = `600 ${supportFontSize}px Manrope, sans-serif`;
+      supportLines.slice(0, availableLines).forEach((line, index) => {
+        context.fillText(line, innerX, supportTop + 34 + index * supportLineHeight);
+      });
+    }
+
+    return canvas;
+  }
+
+  function downloadCanvasImage(canvas, filename) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((image) => {
+        if (!image) {
+          reject(new Error("Unable to create the quiz image."));
+          return;
+        }
+        const link = document.createElement("a");
+        const imageUrl = URL.createObjectURL(image);
+        link.href = imageUrl;
+        link.download = filename;
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(imageUrl), 1_000);
+        resolve();
+      }, "image/png");
+    });
+  }
+
   async function generateFacebookQuizImage() {
     if (!form.subjectId || !form.syllabusId) {
       setFacebookImageError("Select a subject and syllabus first.");
@@ -1437,17 +1587,18 @@ export default function App() {
 
       const subject = subjects.find((item) => item.id === Number(form.subjectId));
       const imageFormat = FACEBOOK_IMAGE_FORMATS[form.facebookImageFormat];
-      const canvas = drawFacebookQuizImage(data.questions[0], subject, imageFormat);
-      const image = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
-      if (!image) {
-        throw new Error("Unable to create the quiz image.");
-      }
-
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(image);
-      link.download = `${String(subject?.subName || "Quiz").replace(/[^a-z0-9]+/gi, "-")} Quiz ${imageFormat.width}x${imageFormat.height}.png`;
-      link.click();
-      window.setTimeout(() => URL.revokeObjectURL(link.href), 1_000);
+      const question = data.questions[0];
+      const filePrefix = `${String(subject?.subName || "Quiz").replace(/[^a-z0-9]+/gi, "-")}`;
+      await Promise.all([
+        downloadCanvasImage(
+          drawFacebookQuizImage(question, subject, imageFormat),
+          `${filePrefix} Quiz Question ${imageFormat.width}x${imageFormat.height}.png`,
+        ),
+        downloadCanvasImage(
+          drawFacebookAnswerImage(question, subject, imageFormat),
+          `${filePrefix} Quiz Answer ${imageFormat.width}x${imageFormat.height}.png`,
+        ),
+      ]);
     } catch (error) {
       setFacebookImageError(error.message || "Unable to generate the quiz image.");
     } finally {
@@ -2326,7 +2477,7 @@ export default function App() {
 
           <div className="facebook-image-tool">
             <strong>Facebook quiz image</strong>
-            <small>Create one engaging quiz image with four options.</small>
+            <small>Create two engaging images: a four-option question card and a correct-answer card. Descriptions are included on the answer card when available.</small>
             <label>
               <span>Image size</span>
               <select
@@ -2348,8 +2499,8 @@ export default function App() {
               disabled={isFacebookImageGenerating}
             >
               {isFacebookImageGenerating
-                ? "Creating Facebook image..."
-                : "Download Facebook quiz image"}
+                ? "Creating Facebook images..."
+                : "Download quiz + answer images"}
             </button>
             {facebookImageError ? <small className="error-text">{facebookImageError}</small> : null}
           </div>
